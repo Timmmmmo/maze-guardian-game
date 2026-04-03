@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>迷宫守护者：无尽波次</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0ff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;touch-action:none}
+canvas{display:block;image-rendering:pixelated}
+#ui{position:fixed;top:0;left:0;right:0;padding:10px 15px;display:flex;justify-content:space-between;background:linear-gradient(180deg,rgba(10,10,30,0.95),rgba(10,10,30,0));z-index:10;font-size:14px;font-weight:bold}
+.stat{color:#00ffcc;text-shadow:0 0 10px #00ffcc}
+.stat b{color:#ffdd00}
+#start{position:fixed;inset:0;background:radial-gradient(ellipse at center,#1a1a4a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#start h1{font-size:32px;color:#00ffcc;text-shadow:0 0 30px #00ffcc;margin-bottom:10px}
+#start .sub{color:#888;margin-bottom:40px}
+#start button{padding:16px 50px;background:linear-gradient(135deg,#00ccaa,#00ffcc);border:none;border-radius:30px;color:#0a0a1a;font-size:18px;font-weight:bold;cursor:pointer;box-shadow:0 0 25px rgba(0,255,200,0.5)}
+#start .tips{color:#667;font-size:12px;margin-top:30px;text-align:center;line-height:2}
+#panel{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10}
+.btn{width:50px;height:50px;border-radius:10px;border:2px solid #00ffcc;background:rgba(10,10,30,0.9);color:#00ffcc;font-size:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.btn:hover,.btn.active{background:rgba(0,255,200,0.2);box-shadow:0 0 15px #00ffcc}
+.btn .cost{font-size:9px;color:#ffdd00;margin-top:2px}
+#over{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50}
+#over h1{font-size:36px;color:#ff4466;text-shadow:0 0 20px #ff4466;margin-bottom:20px}
+#over p{color:#aaa;font-size:16px;margin:8px}
+#over button{margin-top:30px;padding:14px 40px;background:linear-gradient(135deg,#ff4466,#ff6644);border:none;border-radius:30px;color:#fff;font-size:16px;cursor:pointer}
+#wave{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:40px;font-weight:bold;color:#ff4466;text-shadow:0 0 30px #ff4466;display:none;z-index:30;animation:waveIn 1.5s forwards}
+@keyframes waveIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0}}
+#skill{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.95);border:1px solid #00ffcc;border-radius:12px;padding:15px;display:none;z-index:20;min-width:280px}
+#skill h3{color:#ffdd00;text-align:center;margin-bottom:12px}
+.skill-btn{display:block;width:100%;padding:12px;margin:8px 0;background:linear-gradient(135deg,#1a1a3e,#2a2a5e);border:1px solid #00ffcc;color:#00ffcc;border-radius:8px;font-size:13px;cursorpointer;text-align:left}
+#boss{position:fixed;top:55px;left:50%;transform:translateX(-50%);width:200px;display:none;z-index:15}
+#boss .bar{height:8px;background:#333;border-radius:4px}
+#boss .fill{height:100%;background:linear-gradient(90deg,#ff4466,#ff6644);transition:width 0.3s}
+#boss .label{text-align:center;font-size:11px;color:#ff4466;margin-top:3px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <span class="stat">💰<b id="g">100</b></span>
+  <span class="stat">🌊<b id="w">1</b></span>
+  <span class="stat">❤️<b id="h">20</b></span>
+</div>
+<div id="boss"><div class="bar"><div class="fill" id="bf"></div></div><div class="label">👹BOSS</div></div>
+<div id="wave"></div>
+<div id="skill"><h3>⚡选择技能</h3><div id="sl"></div></div>
+<div id="panel"></div>
+<div id="over"><h1>💀游戏结束</h1><p>波次:<b id="fw">0</b></p><p>击杀:<b id="fk">0</b></p><button onclick="start()">再来</button></div>
+<div id="start"><h1>🏰迷宫守护者</h1><div class="sub">无尽波次</div><button onclick="start()">开始游戏</button><div class="tips">点击格子放置塔<br>击杀僵尸获得金币<br>3塔可合成升级</div></div>
+<script>
+const c=document.getElementById('c'),ctx=c.getContext('2d');
+let W,H,S,Cols,Rows,maze=[],towers=[],enemies=[],bullets=[],ps=[];
+let gold=100,hp=20,wave=0,kills=0,score=0,selected=-1,game='menu',bossRef;
+let combo=0,lastKill=0,shaking=0,skPt=0;
+
+const TOWER=[
+  {d:8,r:2.5,f:60,c:'#00ccaa',p:'#00ffcc',v:5,cost:50},
+  {d:15,r:2.2,f:90,c:'#4488ff',p:'#88aaff',v:8,cost:100,s:'chain'},
+  {d:25,r:2,f:120,c:'#ff4400',p:'#ff8800',v:4,cost:200,s:'aoe',a:1.2},
+  {d:40,r:3.5,f:150,c:'#cc44ff',p:'#ee88ff',v:10,cost:500,s:'pierce',n:3},
+  {d:60,r:2.8,f:200,c:'#44ddff',p:'#88eeff',v:6,cost:1000,s:'slow',sl:0.3,slD:90},
+  {d:150,r:4,f:300,c:'#ff2244',p:'#ff6688',v:12,cost:2500,s:'exe',e:0.2}
+];
+const ENEMY=[
+  {hp:30,s:0.6,g:5,c:'#44cc44',z:0.6},
+  {hp:80,s:0.5,g:12,c:'#cccc44',z:0.75},
+  {hp:200,s:0.4,g:30,c:'#cc4444',z:0.9},
+  {hp:1500,s:0.25,g:200,c:'#ff2244',z:1.4,boss:true}
+];
+const SKILLS=[
+  {n:'伤害+15%',d:'所有塔伤害+15%',f:()=>towers.forEach(t=>t.db=(t.db||0)+0.15)},
+  {n:'射程+20%',d:'所有塔射程+20%',f:()=>towers.forEach(t=>t.rb=(t.rb||0)+0.2)},
+  {n:'攻速+25%',d:'所有塔攻速+25%',f:()=>towers.forEach(t=>t.sb=(t.sb||0)+0.25)},
+  {n:'金币x2',d:'击杀金币翻倍',f:()=>gold*=2},
+  {n:'治疗+5',d:'恢复5点生命',f:()=>hp=Math.min(hp+5,99)},
+  {n:'暴击+15%',d:'暴击率+15%',f:()=>towers.forEach(t=>t.crit=(t.crit||0)+0.15)}
+];
+
+function resize(){
+  W=Math.min(window.innerWidth,480);
+  H=Math.min(window.innerHeight,800);
+  S=Math.floor(W/9);
+  Cols=9;Rows=Math.floor(H/S);
+  c.width=W;c.height=H;
+}
+function genMaze(){
+  maze=Array.from({length:Rows},()=>Array(Cols).fill(1));
+  function car(x,y){
+    maze[y][x]=0;
+    [[0,2],[2,0],[0,-2],[-2,0]].sort(()=>Math.random()-0.5).forEach(([dx,dy])=>{
+      let nx=x+dx,ny=y+dy;
+      if(nx>0&&nx<Cols-1&&ny>0&&ny<Rows-1&&maze[ny][nx]){
+        maze[y+dy/2][x+dx/2]=0;car(nx,ny);
+      }
+    });
+  }
+  car(1,1);maze[0][1]=0;maze[Rows-1][Cols-2]=0;
+}
+function findPath(sx,sy,ex,ey){
+  let q=[[sx,sy,[]]],v=new Set([sx+','+sy]),d=[[0,1],[1,0],[0,-1],[-1,0]];
+  while(q.length){
+    let [x,y,p]=q.shift();
+    if(x==ex&&y==ey)return p.concat([[x,y]]);
+    d.forEach(([dx,dy])=>{
+      let nx=x+dx,ny=y+dy,k=nx+','+ny;
+      if(nx>=0&&nx<Cols&&ny>=0&&ny<Rows&&maze[ny][nx]!==1&&!v.has(k)){
+        v.add(k);q.push([nx,ny,p.concat([[x,y]]])]);
+      }
+    });
+  }
+  return[[sx,sy],[ex,ey]];
+}
+function spawnWave(){
+  wave++;
+  document.getElementById('wave').textContent='第'+wave+'波';
+  document.getElementById('wave').style.display='block';
+  setTimeout(()=>document.getElementById('wave').style.display='none',1500);
+  
+  if(wave%10===0){
+    document.getElementById('boss').style.display='block';
+    let baseHp=ENEMY[3].hp*(1+wave*0.3);
+    let b={...ENEMY[3],hp:baseHp,maxHp:baseHp,x:1.5*S,y:0.5*S,path:[],pp:0,f:0};
+    let sc=[1,1],ec=[Cols-2,Rows-2];
+    b.path=findPath(sc[0],sc[1],ec[0],ec[1]);
+    bossRef=b;enemies.push(b);
+  }else{
+    let cnt=5+wave*2;
+    for(let i=0;i<cnt;i++){
+      let ti=wave<3?0:wave<6?Math.random()<0.7?0:1:Math.random()<0.4?0:Math.random()<0.7?1:2;
+      let baseHp=ENEMY[ti].hp*(1+wave*0.15);
+      let e={...ENEMY[ti],hp:baseHp,maxHp:baseHp,x:1.5*S,y:0.5*S,path:[],pp:0,f:0};
+      let sc=[1,1],ec=[Cols-2,Rows-2];
+      e.path=findPath(sc[0],sc[1],ec[0],ec[1]);
+      enemies.push(e);
+    }
+  }
+  updateUI();
+}
+function updateUI(){
+  document.getElementById('g').textContent=gold;
+  document.getElementById('w').textContent=wave;
+  document.getElementById('h').textContent=hp;
+  let p=document.getElementById('panel');
+  p.innerHTML='';
+  TOWER.forEach((t,i)=>{
+    let b=document.createElement('div');
+    b.className='btn'+(selected===i?' active':'');
+    b.innerHTML='<span>'+['A','S','F','C','T','D'][i]+'</span><span class="cost">'+t.cost+'</span>';
+    b.onclick=()=>{if(gold>=t.cost)selected=selected===i?-1:i;updateUI();};
+    b.style.opacity=gold>=t.cost?1:0.5;
+    p.appendChild(b);
+  });
+}
+function spawnP(x,y,col,cnt){
+  for(let i=0;i<cnt;i++){
+    let a=Math.random()*Math.PI*2,s=1+Math.random()*3;
+    ps.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:30,m:30,c:col});
+  }
+}
+function spawnTxt(x,y,txt,col){
+  ps.push({x,y,txt,tx:txt,c:col,l:60,vy:-1.5});
+}
+function update(){
+  if(game!=='playing')return;
+  
+  // Spawn
+  if(enemies.length===0){
+    skPt++;
+    if(skPt>60){
+      skPt=0;
+      if(wave>0&&wave%3===0)showSkill();
+      else spawnWave();
+    }
+  }
+  
+  // Enemies
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    e.pp+=e.s/60;
+    let idx=Math.min(Math.floor(e.pp),e.path.length-1);
+    if(e.path[idx]){e.x=(e.path[idx][0]+0.5)*S;e.y=(e.path[idx][1]+0.5)*S;}
+    if(e.pp>=e.path.length-1){
+      hp--;shaking=10;
+      enemies.splice(i,1);updateUI();
+      if(hp<=0)end();
+      continue;
+    }
+    if(e.f>0)e.f--;
+    if(e.boss&&bossRef===e){
+      let max=e.maxHp||e.hp;
+      document.getElementById('bf').style.width=(Math.max(0,e.hp/max*100))+'%';
+    }
+  }
+  
+  // Towers
+  towers.forEach(t=>{
+    if(t.cd>0){t.cd--;return;}
+    let tx=(t.x+0.5)*S,ty=(t.y+0.5)*S;
+    let range=TOWER[t.t].r*S*(1+(t.rb||0));
+    let target=null,minD=Infinity;
+    enemies.forEach(e=>{let d=Math.hypot(e.x-tx,e.y-ty);if(d<range&&d<minD){minD=d;target=e;}});
+    if(target){
+      t.cd=TOWER[t.t].f/(1+(t.sb||0));
+      let ang=Math.atan2(target.y-ty,target.x-tx);
+      let dmg=TOWER[t.t].d*(1+(t.db||0));
+      let crit=t.crit&&Math.random()<t.crit;
+      if(crit)dmg*=2;
+      bullets.push({x:tx,y:ty,vx:Math.cos(ang)*TOWER[t.t].v,vy:Math.sin(ang)*TOWER[t.t].v,dmg,col:TOWER[t.t].p,t:t.t,crit});
+    }
+  });
+  
+  // Bullets
+  for(let i=bullets.length-1;i>=0;i--){
+    let b=bullets[i];
+    b.x+=b.vx;b.y+=b.vy;
+    if(b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue;}
+    for(let j=enemies.length-1;j>=0;j--){
+      let e=enemies[j];
+      if(Math.hypot(e.x-b.x,e.y-b.y)<e.z*S*0.4){
+        e.hp-=b.dmg;e.f=6;
+        if(b.t===2)spawnP(b.x,b.y,'#ff6600',8);
+        if(b.crit)spawnTxt(b.x,b.y,'暴击!','#ffff00');
+        bullets.splice(i,1);
+        if(e.hp<=0){
+          gold+=e.g;kills++;
+          let now=Date.now();
+          if(now-lastKill<1500){combo++;score+=combo*5;}else combo=0;
+          lastKill=now;
+          spawnTxt(e.x,e.y,'+'+e.g,'#ffdd00');
+          if(combo>=3)spawnTxt(e.x,e.y-15,'x'+combo+'!','#ff8800');
+          spawnP(e.x,e.y,e.c,12);
+          if(e.boss){
+            gold+=500;spawnTxt(e.x,e.y,'BOSS+500','#ff2244');spawnP(e.x,e.y,'#ff2244',25);
+            document.getElementById('boss').style.display='none';bossRef=null;
+          }
+          enemies.splice(j,1);
+        }
+        break;
+      }
+    }
+  }
+  
+  // Particles
+  for(let i=ps.length-1;i>=0;i--){
+    let p=ps[i];
+    if(p.txt){
+      p.y+=p.vy;p.l--;
+    }else{
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.1;p.l--;
+    }
+    if(p.l<=0)ps.splice(i,1);
+  }
+  
+  render();
+  requestAnimationFrame(update);
+}
+function render(){
+  let sx=0,sy=0;
+  if(shaking>0){sx=(Math.random()-0.5)*shaking;sy=(Math.random()-0.5)*shaking;shaking*=0.9;if(shaking<0.5)shaking=0;}
+  ctx.save();ctx.translate(sx,sy);
+  ctx.fillStyle='#0a0a1a';ctx.fillRect(0,0,W,H);
+  
+  // Maze
+  maze.forEach((row,y)=>row.forEach((cell,x)=>{
+    if(cell===1){
+      let g=ctx.createLinearGradient(x*S,y*S,x*S+S,y*S+S);
+      g.addColorStop(0,'#1a1a3a');g.addColorStop(1,'#121228');
+      ctx.fillStyle=g;ctx.fillRect(x*S+1,y*S+1,S-2,S-2);
+    }else{
+      ctx.fillStyle='#0f0f22';ctx.fillRect(x*S,y*S,S,S);
+      ctx.strokeStyle='rgba(0,255,200,0.06)';ctx.strokeRect(x*S,y*S,S,S);
+    }
+  }));
+  
+  // Spawn/End
+  ctx.fillStyle='rgba(0,255,100,0.15)';ctx.fillRect(1*S,0,S,S);
+  ctx.fillStyle='rgba(255,60,60,0.15)';ctx.fillRect((Cols-2)*S,(Rows-1)*S,S,S);
+  
+  // Towers
+  towers.forEach(t=>{
+    let tx=(t.x+0.5)*S,ty=(t.y+0.5)*S,def=TOWER[t.t];
+    ctx.save();ctx.shadowBlur=12;ctx.shadowColor=def.c;
+    ctx.beginPath();ctx.arc(tx,ty,S*0.4,0,Math.PI*2);
+    ctx.fillStyle=def.c+'33';ctx.fill();ctx.strokeStyle=def.c;ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.arc(tx,ty,S*0.25,0,Math.PI*2);
+    ctx.fillStyle=def.c+'66';ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold '+(S*0.35)+'px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(t.lvl||1,tx,ty);
+    ctx.restore();
+  });
+  
+  // Enemies
+  enemies.forEach(e=>{
+    let sz=e.z*S*0.4;
+    ctx.save();
+    if(e.f>0){ctx.shadowBlur=15;ctx.shadowColor='#fff';}
+    ctx.beginPath();ctx.arc(e.x,e.y,sz,0,Math.PI*2);
+    let g=ctx.createRadialGradient(e.x-sz*0.3,e.y-sz*0.3,0,e.x,e.y,sz);
+    g.addColorStop(0,e.c);g.addColorStop(1,shade(e.c,-40));
+    ctx.fillStyle=e.f>0?'#fff':g;ctx.fill();
+    if(e.f>0)e.f--;
+    // HP
+    if(!e.boss){
+      let bw=sz*2,mh=e.maxHp||e.hp;
+      ctx.fillStyle='#333';ctx.fillRect(e.x-bw,e.y-sz-5,bw,3);
+      let pct=e.hp/mh;
+      ctx.fillStyle=pct>0.5?'#44cc44':pct>0.25?'#cccc44':'#cc4444';
+      ctx.fillRect(e.x-bw,e.y-sz-5,bw*pct,3);
+    }
+    ctx.restore();
+  });
+  
+  // Bullets
+  bullets.forEach(b=>{
+    ctx.save();ctx.shadowBlur=8;ctx.shadowColor=b.col;
+    ctx.beginPath();ctx.arc(b.x,b.y,3,0,Math.PI*2);
+    ctx.fillStyle=b.col;ctx.fill();
+    ctx.restore();
+  });
+  
+  // Particles
+  ps.forEach(p=>{
+    if(p.txt){
+      ctx.globalAlpha=Math.min(1,p.l/20);
+      ctx.fillStyle=p.c;ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+      ctx.fillText(p.txt,p.x,p.y);
+    }else{
+      ctx.globalAlpha=p.l/p.m;
+      ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();
+    }
+  });
+  ctx.globalAlpha=1;
+  
+  // Hover
+  if(selected>=0){
+    // Could add hover effect here
+  }
+  ctx.restore();
+}
+function shade(c,p){
+  let n=parseInt(c.replace('#',''),16),a=Math.round(2.55*p);
+  let R=Math.max(0,Math.min(255,(n>>16)+a));
+  let G=Math.max(0,Math.min(255,((n>>8)&255)+a));
+  let B=Math.max(0,Math.min(255,(n&255)+a));
+  return '#'+(0x1000000+R*0x10000+G*0x100+B).toString(16).slice(1);
+}
+function showSkill(){
+  let sk=[...SKILLS].sort(()=>Math.random()-0.5).slice(0,3);
+  let sl=document.getElementById('sl');sl.innerHTML='';
+  sk.forEach(s=>{
+    let b=document.createElement('button');
+    b.className='skill-btn';
+    b.innerHTML='<b>'+s.n+'</b> '+s.d;
+    b.onclick=()=>{s.f();document.getElementById('skill').style.display='none';spawnWave();};
+    sl.appendChild(b);
+  });
+  document.getElementById('skill').style.display='block';
+}
+c.addEventListener('click',e=>{
+  if(game!=='playing')return;
+  let r=c.getBoundingClientRect();
+  let x=Math.floor((e.clientX-r.left)/S),y=Math.floor((e.clientY-r.top)/S);
+  if(y<0||y>=Rows||x<0||x>=Cols)return;
+  if(selected<0)return;
+  let t=TOWER[selected];
+  if(gold<t.cost||maze[y][x]===1||towers.some(t=>t.x===x&&t.y===y))return;
+  gold-=t.cost;
+  towers.push({x,y,t:selected,lvl:1,cd:0,db:0,rb:0,sb:0,crit:0});
+  maze[y][x]=1;spawnP((x+0.5)*S,(y+0.5)*S,t.c,8);
+  enemies.forEach(e=>{let sc=[1,1],ec=[Cols-2,Rows-2];e.path=findPath(sc[0],sc[1],ec[0],ec[1]);e.pp=Math.min(e.pp,e.path.length-1);});
+  selected=-1;updateUI();
+});
+function start(){
+  document.getElementById('start').style.display='none';
+  document.getElementById('over').style.display='none';
+  resize();genMaze();
+  gold=100;hp=20;wave=0;kills=0;score=0;
+  towers=[];enemies=[];bullets=[];ps=[];bossRef=null;
+  combo=0;lastKill=0;shaking=0;selected=-1;skPt=0;
+  game='playing';updateUI();
+  spawnWave();
+}
+function end(){
+  game='over';
+  document.getElementById('fw').textContent=wave;
+  document.getElementById('fk').textContent=kills;
+  document.getElementById('over').style.display='flex';
+}
+resize();
+requestAnimationFrame(update);
+</script>
+</body>
+</html>
