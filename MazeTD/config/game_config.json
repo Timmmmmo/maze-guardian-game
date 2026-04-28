@@ -1,0 +1,234 @@
+{
+  "version": "2.0.0-cloudcode",
+  "last_updated": "2026-04-08",
+  "description": "MazeTD 游戏配置 - Cloud Code化版本",
+  
+  "towers": {
+    "archer": {
+      "id": "archer",
+      "name": "弓箭塔",
+      "icon": "🏹",
+      "base_cost": 80,
+      "base_dps": 25,
+      "range": 120,
+      "attack_speed": 1.0,
+      "target_type": "single",
+      "upgrade_path": [
+        {"level": 1, "cost": 80, "dps": 25, "range": 120},
+        {"level": 2, "cost": 120, "dps": 45, "range": 130},
+        {"level": 3, "cost": 200, "dps": 80, "range": 150},
+        {"level": 4, "cost": 350, "dps": 140, "range": 170},
+        {"level": 5, "cost": 600, "dps": 250, "range": 200}
+      ]
+    },
+    "cannon": {
+      "id": "cannon",
+      "name": "火炮塔",
+      "icon": "💣",
+      "base_cost": 120,
+      "base_dps": 40,
+      "range": 100,
+      "attack_speed": 0.8,
+      "target_type": "aoe",
+      "aoe_radius": 60,
+      "upgrade_path": [
+        {"level": 1, "cost": 120, "dps": 40, "range": 100, "aoe_radius": 60},
+        {"level": 2, "cost": 180, "dps": 75, "range": 110, "aoe_radius": 70},
+        {"level": 3, "cost": 300, "dps": 140, "range": 120, "aoe_radius": 80},
+        {"level": 4, "cost": 500, "dps": 260, "range": 135, "aoe_radius": 90},
+        {"level": 5, "cost": 850, "dps": 480, "range": 150, "aoe_radius": 100}
+      ]
+    },
+    "ice": {
+      "id": "ice",
+      "name": "冰冻塔",
+      "icon": "❄️",
+      "base_cost": 100,
+      "base_dps": 10,
+      "range": 100,
+      "attack_speed": 1.2,
+      "target_type": "single",
+      "special": "slow",
+      "slow_effect": 0.3,
+      "slow_duration": 2.0,
+      "upgrade_path": [
+        {"level": 1, "cost": 100, "dps": 10, "range": 100, "slow_effect": 0.30, "slow_duration": 2.0},
+        {"level": 2, "cost": 150, "dps": 18, "range": 110, "slow_effect": 0.35, "slow_duration": 2.5},
+        {"level": 3, "cost": 250, "dps": 32, "range": 125, "slow_effect": 0.40, "slow_duration": 3.0},
+        {"level": 4, "cost": 400, "dps": 55, "range": 140, "slow_effect": 0.45, "slow_duration": 3.5},
+        {"level": 5, "cost": 700, "dps": 95, "range": 160, "slow_effect": 0.50, "slow_duration": 4.0}
+      ]
+    },
+    "lightning": {
+      "id": "lightning",
+      "name": "闪电塔",
+      "icon": "⚡",
+      "base_cost": 150,
+      "base_dps": 35,
+      "range": 140,
+      "attack_speed": 0.9,
+      "target_type": "chain",
+      "chain_count": 3,
+      "chain_decay": 0.7,
+      "upgrade_path": [
+        {"level": 1, "cost": 150, "dps": 35, "range": 140, "chain_count": 3, "chain_decay": 0.70},
+        {"level": 2, "cost": 220, "dps": 65, "range": 155, "chain_count": 4, "chain_decay": 0.72},
+        {"level": 3, "cost": 380, "dps": 120, "range": 175, "chain_count": 5, "chain_decay": 0.75},
+        {"level": 4, "cost": 650, "dps": 220, "range": 200, "chain_count": 6, "chain_decay": 0.78},
+        {"level": 5, "cost": 1100, "dps": 400, "range": 230, "chain_count": 8, "chain_decay": 0.80}
+      ]
+    },
+    "poison": {
+      "id": "poison",
+      "name": "毒塔",
+      "icon": "☠️",
+      "base_cost": 90,
+      "base_dps": 8,
+      "range": 110,
+      "attack_speed": 1.0,
+      "target_type": "dot",
+      "dot_duration": 5.0,
+      "dot_interval": 1.0,
+      "upgrade_path": [
+        {"level": 1, "cost": 90, "dps": 8, "range": 110, "dot_duration": 5.0},
+        {"level": 2, "cost": 140, "dps": 15, "range": 120, "dot_duration": 6.0},
+        {"level": 3, "cost": 230, "dps": 28, "range": 135, "dot_duration": 7.0},
+        {"level": 4, "cost": 380, "dps": 50, "range": 155, "dot_duration": 8.0},
+        {"level": 5, "cost": 650, "dps": 90, "range": 180, "dot_duration": 10.0}
+      ]
+    }
+  },
+  
+  "enemies": {
+    "mushroom": {
+      "id": "mushroom",
+      "name": "蘑菇怪",
+      "hp": 80,
+      "speed": 1.0,
+      "reward": 8,
+      "damage": 1,
+      "color": "#FF6B6B"
+    },
+    "pumpkin": {
+      "id": "pumpkin",
+      "name": "南瓜怪",
+      "hp": 150,
+      "speed": 0.8,
+      "reward": 12,
+      "damage": 2,
+      "armor": 5,
+      "color": "#FFA502"
+    },
+    "ghost": {
+      "id": "ghost",
+      "name": "幽灵",
+      "hp": 60,
+      "speed": 1.5,
+      "reward": 10,
+      "damage": 1,
+      "dodge": 0.2,
+      "color": "#A29BFE"
+    },
+    "statue": {
+      "id": "statue",
+      "name": "石像鬼",
+      "hp": 300,
+      "speed": 0.5,
+      "reward": 20,
+      "damage": 3,
+      "armor": 15,
+      "color": "#636E72"
+    },
+    "boss": {
+      "id": "boss",
+      "name": "BOSS",
+      "hp": 2000,
+      "speed": 0.4,
+      "reward": 100,
+      "damage": 10,
+      "armor": 30,
+      "regen": 10,
+      "color": "#FF0000"
+    }
+  },
+  
+  "levels": [
+    {
+      "id": 1,
+      "name": "新手教学",
+      "description": "学习基础操作",
+      "grid_size": {"width": 12, "height": 8},
+      "start_gold": 200,
+      "start_lives": 20,
+      "waves": [
+        {"enemy": "mushroom", "count": 5, "interval": 2.0, "reward": 50}
+      ],
+      "star_thresholds": [100, 150, 200]
+    },
+    {
+      "id": 2,
+      "name": "初级挑战",
+      "description": "简单波次组合",
+      "grid_size": {"width": 14, "height": 10},
+      "start_gold": 250,
+      "start_lives": 20,
+      "waves": [
+        {"enemy": "mushroom", "count": 8, "interval": 1.8},
+        {"enemy": "pumpkin", "count": 3, "interval": 2.0}
+      ],
+      "star_thresholds": [200, 300, 400]
+    },
+    {
+      "id": 3,
+      "name": "中级考验",
+      "description": "多种敌人类型",
+      "grid_size": {"width": 16, "height": 12},
+      "start_gold": 300,
+      "start_lives": 15,
+      "waves": [
+        {"enemy": "mushroom", "count": 10, "interval": 1.5},
+        {"enemy": "ghost", "count": 5, "interval": 1.8},
+        {"enemy": "pumpkin", "count": 5, "interval": 2.0}
+      ],
+      "star_thresholds": [300, 450, 600]
+    },
+    {
+      "id": 4,
+      "name": "高级迷宫",
+      "description": "复杂路径规划",
+      "grid_size": {"width": 18, "height": 14},
+      "start_gold": 350,
+      "start_lives": 15,
+      "waves": [
+        {"enemy": "ghost", "count": 8, "interval": 1.2},
+        {"enemy": "statue", "count": 4, "interval": 2.5},
+        {"enemy": "mushroom", "count": 15, "interval": 1.0}
+      ],
+      "star_thresholds": [400, 600, 800]
+    },
+    {
+      "id": 5,
+      "name": "终极试炼",
+      "description": "BOSS挑战",
+      "grid_size": {"width": 20, "height": 15},
+      "start_gold": 500,
+      "start_lives": 10,
+      "waves": [
+        {"enemy": "pumpkin", "count": 10, "interval": 1.5},
+        {"enemy": "statue", "count": 6, "interval": 2.0},
+        {"enemy": "ghost", "count": 12, "interval": 1.0},
+        {"enemy": "boss", "count": 1, "interval": 5.0, "is_boss": true}
+      ],
+      "star_thresholds": [500, 800, 1200]
+    }
+  ],
+  
+  "balance_rules": {
+    "gold_per_wave": 50,
+    "wall_cost": 10,
+    "sell_refund_ratio": 0.7,
+    "interest_rate": 0.02,
+    "max_interest": 100,
+    "difficulty_scaling": 1.15
+  }
+}

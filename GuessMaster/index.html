@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>🎯 猜猜看 - GuessMaster</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a1a;--card:#141432;--card2:#1e1e45;
+  --accent:#6c5ce7;--accent2:#a29bfe;--success:#00cec9;--danger:#ff6b6b;
+  --gold:#fdcb6e;--warn:#ffa502;--text:#e8e8f0;--text2:#6e6e8a;
+  --radius:16px;--shadow:0 8px 32px rgba(108,92,231,.25);
+}
+html,body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;
+  overflow-x:hidden;overflow-y:auto;-webkit-tap-highlight-color:transparent;
+  -webkit-text-size-adjust:100%
+}
+/* 背景 */
+.bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse at 20% 50%,rgba(108,92,231,.08) 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 20%,rgba(0,206,201,.06) 0%,transparent 50%)}
+.particle{position:absolute;border-radius:50%;opacity:.10;animation:drift 25s infinite ease-in-out}
+@keyframes drift{0%,100%{transform:translateY(0) translateX(0)}25%{transform:translateY(-60px) translateX(30px)}
+50%{transform:translateY(-20px) translateX(-20px)}75%{transform:translateY(-80px) translateX(10px)}}
+
+.container{width:100%;max-width:460px;margin:0 auto;padding:12px;padding-bottom:40px;z-index:1;position:relative}
+
+/* 头部 */
+.hd{text-align:center;padding:14px 0 10px}
+.hd h1{font-size:24px;font-weight:800;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#00cec9);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px}
+.hd .sub{font-size:11px;color:var(--text2);margin-top:2px;letter-spacing:3px;text-transform:uppercase}
+
+/* 统计 */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.st-card{background:var(--card);border-radius:12px;padding:8px 4px;text-align:center;border:1px solid rgba(108,92,231,.15)}
+.st-v{font-size:17px;font-weight:800;color:var(--accent2)}
+.st-l{font-size:10px;color:var(--text2);margin-top:1px}
+
+/* 进度点 */
+.dots-wrap{display:flex;gap:3px;justify-content:center;margin-bottom:10px;flex-wrap:wrap;padding:0 4px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--card2);transition:all .3s}
+.dot.done{background:var(--success);transform:scale(.85)}
+.dot.cur{background:var(--accent);box-shadow:0 0 8px var(--accent);transform:scale(1.3)}
+
+/* 关卡栏 */
+.lv-bar{display:flex;justify-content:space-between;align-items:center;
+  background:var(--card);border-radius:12px;padding:8px 14px;margin-bottom:10px;
+  border:1px solid rgba(108,92,231,.18)}
+.lv-left{display:flex;align-items:center;gap:7px}
+.lv-num{font-size:18px;font-weight:800;color:var(--gold)}
+.lv-type{font-size:11px;font-weight:700;padding:3px 9px;border-radius:10px}
+.t-item{background:linear-gradient(135deg,#ff6b6b,#ee5a5a);color:#fff}
+.t-geo{background:linear-gradient(135deg,#74b9ff,#0984e3);color:#fff}
+.t-city{background:linear-gradient(135deg,#55efc4,#00b894);color:#fff}
+.chances{display:flex;gap:3px}
+.cd{width:8px;height:8px;border-radius:50%;background:var(--accent);transition:all .3s}
+.cd.u{background:var(--card2);opacity:.25;transform:scale(.5)}
+.cd.lo{background:var(--danger);animation:blink .5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* 题目卡片 */
+.q-card{background:var(--card);border-radius:var(--radius);padding:18px 16px;margin-bottom:10px;
+  border:1px solid rgba(108,92,231,.18);position:relative;overflow:hidden;transition:transform .3s}
+.q-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--success),var(--gold));opacity:.5}
+.q-badge{display:inline-block;padding:3px 10px;border-radius:16px;font-size:10px;font-weight:700;
+  margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+.q-icon{font-size:44px;text-align:center;margin:6px 0;animation:bounce 2.5s infinite ease-in-out}
+@keyframes bounce{0%,100%{transform:scale(1) translateY(0)}50%{transform:scale(1.06) translateY(-5px)}}
+.q-hint{font-size:14px;line-height:1.7;color:var(--text2);min-height:38px;text-align:center}
+.q-hint-btn{display:block;margin:6px auto 0;padding:3px 14px;border-radius:10px;
+  background:rgba(108,92,231,.1);color:var(--accent2);font-size:11px;border:none;cursor:pointer}
+
+/* 概率区 */
+.prob-sec{margin-bottom:10px}
+.prob-lbl{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.prob-lbl span:last-child{font-weight:700}
+.prob-wrap{background:var(--card);border-radius:12px;padding:3px;border:1px solid rgba(108,92,231,.12)}
+.prob-bg{height:28px;border-radius:10px;background:var(--card2);overflow:hidden;position:relative}
+.prob-fill{height:100%;border-radius:10px;transition:width .4s cubic-bezier(.22,1,.36,1);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.4);min-width:34px;white-space:nowrap}
+.hist{max-height:100px;overflow-y:auto;margin-top:6px}
+.hist::-webkit-scrollbar{width:3px}
+.hist::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+.hi{display:flex;justify-content:space-between;align-items:center;padding:4px 8px;
+  font-size:11px;border-radius:6px;margin-bottom:2px;background:rgba(255,255,255,.02)}
+.hi-a{color:var(--accent2);font-weight:600;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hi-p{font-weight:700;font-size:12px}
+
+/* 输入区 - 关键修复：确保始终可见 */
+.in-area{margin-bottom:10px;position:relative;z-index:5}
+.in-hint{text-align:center;font-size:11px;color:var(--text2);margin-bottom:6px;min-height:16px}
+.in-row{display:flex;gap:8px;align-items:center}
+.in-row input{flex:1;height:48px;border-radius:14px;border:2px solid var(--card2);
+  background:var(--card);color:var(--text);font-size:16px;padding:0 14px;outline:none;
+  transition:border-color .3s, box-shadow .3s;-webkit-appearance:none;appearance:none}
+.in-row input:focus{border-color:var(--accent);box-shadow:0 0 18px rgba(108,92,231,.2)}
+.in-row input::placeholder{color:var(--text2);font-size:13px}
+.btn-go{height:48px;min-width:72px;padding:0 16px;border-radius:14px;border:none;
+  background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;font-size:14px;font-weight:700;
+  cursor:pointer;transition:transform .15s,box-shadow .15s;white-space:nowrap;flex-shrink:0}
+.btn-go:hover{transform:scale(1.02);box-shadow:var(--shadow)}
+.btn-go:active{transform:scale(.95)}
+
+/* 广告 */
+.btn-ad{width:100%;height:40px;border-radius:12px;border:2px dashed var(--gold);
+  background:rgba(253,203,110,.06);color:var(--gold);font-size:12px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;
+  transition:all .3s;margin-bottom:10px}
+.btn-ad:hover:not(:disabled){background:rgba(253,203,110,.12);transform:scale(1.01)}
+.btn-ad:disabled{opacity:.35;cursor:not-allowed}
+
+/* 弹窗 */
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.72);backdrop-filter:blur(10px);z-index:100;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{background:var(--card);border-radius:22px;padding:30px 20px;width:88%;max-width:340px;
+  text-align:center;border:1px solid rgba(108,92,231,.25);
+  transform:scale(.8);transition:transform .4s cubic-bezier(.22,1,.36,1)}
+.overlay.show .modal{transform:scale(1)}
+.m-icon{font-size:52px;margin-bottom:8px}
+.m-title{font-size:22px;margin-bottom:6px;font-weight:800}
+.m-desc{color:var(--text2);font-size:13px;line-height:1.7;margin-bottom:16px}
+.m-answer{background:var(--card2);border-radius:12px;padding:12px;margin-bottom:16px}
+.m-answer .al{font-size:11px;color:var(--text2)}
+.m-answer .av{font-size:19px;font-weight:800;color:var(--gold);margin-top:3px}
+.btn-m{padding:12px 32px;border-radius:14px;border:none;font-size:14px;font-weight:700;
+  cursor:pointer;transition:all .2s}
+.btn-m.pri{background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff}
+.btn-m.pri:hover{transform:scale(1.03)}
+.btn-m.sec{background:var(--card2);color:var(--text);border:1px solid rgba(108,92,231,.25)}
+
+/* 广告模拟弹窗 */
+.ad-overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.85);z-index:150;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .3s}
+.ad-overlay.show{opacity:1;pointer-events:auto}
+.ad-box{background:var(--card);border-radius:18px;padding:26px;width:85%;max-width:280px;text-align:center;border:1px solid rgba(108,92,231,.25)}
+.ad-count{font-size:44px;font-weight:800;color:var(--gold);margin:14px 0}
+.ad-label{font-size:13px;color:var(--text2)}
+
+/* 撒花 */
+.confetti-canvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200}
+
+/* 动画 */
+.pop{animation:popIn .4s cubic-bezier(.22,1,.36,1)}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.flash{animation:flash .3s}
+@keyframes flash{0%,100%{}50%{background:rgba(0,206,201,.15)}}
+
+@media(max-height:720px){
+  .hd{padding:10px 0 6px}.hd h1{font-size:21px}
+  .q-card{padding:14px 14px}.q-icon{font-size:38px}
+  .hist{max-height:70px}
+  .in-row input{height:42px}.btn-go{height:42px;min-width:64px}
+}
+</style>
+</head>
+<body>
+
+<div class="bg" id="bg"></div>
+
+<div class="container">
+  <div class="hd"><h1>🎯 猜猜看</h1><div class="sub">GUESSMASTER</div></div>
+
+  <div class="stats">
+    <div class="st-card"><div class="st-v" id="svLv">1/50</div><div class="st-l">关卡</div></div>
+    <div class="st-card"><div class="st-v" id="svStk">0</div><div class="st-l">连胜</div></div>
+    <div class="st-card"><div class="st-v" id="svSc">0</div><div class="st-l">总分</div></div>
+  </div>
+
+  <div class="dots-wrap" id="dots"></div>
+
+  <div class="lv-bar">
+    <div class="lv-left">
+      <span class="lv-num" id="lvNum">Lv.1</span>
+      <span class="lv-type t-item" id="lvType">物品</span>
+    </div>
+    <div class="chances" id="chDots"></div>
+  </div>
+
+  <div class="q-card pop" id="qCard">
+    <div class="q-badge t-item" id="qBadge">📦 物品</div>
+    <div class="q-icon" id="qIcon">❓</div>
+    <div class="q-hint" id="qHint">加载中...</div>
+    <button class="q-hint-btn" id="hintBtn" onclick="nextHint()" style="display:none">💡 换一条提示</button>
+  </div>
+
+  <div class="prob-sec">
+    <div class="prob-lbl"><span>匹配概率</span><span id="probTxt">输入答案开始</span></div>
+    <div class="prob-wrap"><div class="prob-bg"><div class="prob-fill" id="probFill" style="width:0%">0%</div></div></div>
+    <div class="hist" id="hist"></div>
+  </div>
+
+  <!-- 输入区：确保在视口内 -->
+  <div class="in-area" id="inArea">
+    <div class="in-hint" id="inHint">💡 输入你的猜测，越接近答案概率越高！</div>
+    <div class="in-row">
+      <input type="text" id="ansInput" placeholder="输入答案..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="go">
+      <button class="btn-go" id="goBtn" type="button">提交 🚀</button>
+    </div>
+  </div>
+
+  <button class="btn-ad" id="adBtn" type="button" onclick="watchAd()"><span>📺</span> 观看广告获得 +3 次机会</button>
+</div>
+
+<!-- 结果弹窗 -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalBox">
+    <div class="m-icon" id="mIcon">🎉</div>
+    <h2 class="m-title" id="mTitle">恭喜过关！</h2>
+    <p class="m-desc" id="mDesc">你成功猜出了正确答案！</p>
+    <div class="m-answer" id="mAnswer" style="display:none">
+      <div class="al">正确答案是</div><div class="av" id="mAv">-</div>
+    </div>
+    <button class="btn-m pri" id="mBtn" type="button" onclick="nxtLv()">下一关 →</button>
+  </div>
+</div>
+
+<!-- 广告弹窗 -->
+<div class="ad-overlay" id="adOverlay">
+  <div class="ad-box">
+    <div style="font-size:28px;margin-bottom:6px">📺</div>
+    <div style="font-size:15px;font-weight:700;color:var(--text)">广告播放中...</div>
+    <div style="font-size:11px;color:var(--text2);margin-top:3px">感谢支持，请稍候</div>
+    <div class="ad-count" id="adCount">5</div>
+    <div class="ad-label">秒后获得 +3 机会</div>
+  </div>
+</div>
+
+<canvas class="confetti-canvas" id="confetti"></canvas>
+
+<script>
+// ==================== 数据库 ====================
+const DB = {
+  items: [
+    {name:"手机",hints:["每个人每天都离不开它","可以打电话、上网","有苹果华为等品牌"],icon:"📱"},
+    {name:"电脑",hints:["办公娱乐都离不开它","有键盘和屏幕","可以运行各种软件"],icon:"💻"},
+    {name:"钥匙",hints:["用来开门的小金属片","丢了会很麻烦","通常挂在钥匙扣上"],icon:"🔑"},
+    {name:"雨伞",hints:["下雨天必备","可以折叠收纳","有多种颜色"],icon:"☂️"},
+    {name:"眼镜",hints:["戴在眼睛上","帮助看清东西","有人近视有人时尚戴"],icon:"👓"},
+    {name:"手表",hints:["戴在手腕上看时间","有机械表电子表","也是一种时尚配饰"],icon:"⌚"},
+    {name:"钱包",hints:["装钱和卡的小包","出门必带","很多人用手机代替"],icon:"👛"},
+    {name:"牙刷",hints:["每天早晚都用","用来清洁牙齿","应该定期更换"],icon:"🪥"},
+    {name:"枕头",hints:["睡觉时垫在头下","有软有硬","让人睡得更舒服"],icon:"🛏️"},
+    {name:"镜子",hints:["可以看到自己的样子","浴室里常见","女生化妆时需要"],icon:"🪞"},
+    {name:"闹钟",hints:["早上叫你起床的东西","会发出响声","有机械的和电子的"],icon:"⏰"},
+    {name:"台灯",hints:["放在桌上的照明工具","晚上学习工作常用","可调节亮度"],icon:"💡"},
+    {name:"水杯",hints:["用来喝水的容器","有保温杯普通杯","材质多样"],icon:"🥤"},
+    {name:"背包",hints:["背在背上的袋子","上学上班旅行常用","能装很多东西"],icon:"🎒"},
+    {name:"耳机",hints:["戴在耳朵上听音乐","有线或无线","走路跑步常带"],icon:"🎧"},
+    {name:"充电器",hints:["给电子设备充电的工具","手机没电就靠它","有不同接口类型"],icon:"🔌"},
+    {name:"剪刀",hints:["用来剪东西的工具","两个刀刃交叉","小心别伤到手"],icon:"✂️"},
+    {name:"胶带",hints:["可以粘东西的带子","透明或不透明","打包快递常用"],icon:"🩹"},
+    {name:"口罩",hints:["疫情期间人人佩戴","遮住口鼻","防尘防病菌"],icon:"😷"},
+    {name:"帽子",hints:["戴在头上的服饰","防晒保暖","有很多款式"],icon:"🧢"},
+    {name:"围巾",hints:["围在脖子上的织物","冬天保暖","也有装饰作用"],icon:"🧣"},
+    {name:"手套",hints:["戴在手上的保护用品","冬天防寒","干活也常戴"],icon:"🧤"},
+    {name:"拖鞋",hints:["在家穿的简易鞋","舒适方便","夏天冬天都有不同款式"],icon:"🩴"},
+    {name:"花瓶",hints:["插花的容器","摆在家里做装饰","陶瓷玻璃等材质"],icon:"🏺"},
+    {name:"蜡烛",hints:["点燃后发光","停电时有用","生日蛋糕上也常见"],icon:"🕯️"},
+    {name:"放大镜",hints:["把东西放大","侦探常用","看书看报也用到"],icon:"🔍"},
+    {name:"指南针",hints:["指示方向","户外探险必备","指针指向北方"],icon:"🧭"},
+    {name:"温度计",hints:["测量温度","发烧时要用","电子和水银两种"],icon:"🌡️"},
+    {name:"订书机",hints:["钉纸张的办公用品","办公室常见","需要订书钉配合"],icon:"📎"},
+    {name:"回形针",hints:["夹纸张的小金属丝","形状像回字","办公桌上常见"],icon:"📎"},
+    {name:"便利贴",hints:["贴在任何地方的小纸条","背面有胶","写提醒事项"],icon:"📝"},
+    {name:"指甲刀",hints:["修剪指甲的工具","随身携带","普通和电动两种"],icon:"✂️"},
+    {name:"梳子",hints:["整理头发","每天梳头都要用","塑料木质都有"],icon:"🪮"},
+    {name:"肥皂",hints:["清洁用的固体","洗手洗澡都能用","不同香味"],icon:"🧼"},
+    {name:"洗发水",hints:["洗头发用的液体","洗澡时使用","各种功效类型"],icon:"🧴"},
+    {name:"卫生纸",hints:["日常必需品","厕所必备","用完要处理掉"],icon:"🧻"},
+    {name:"垃圾桶",hints:["装垃圾的容器","每个房间都应有","分类投放垃圾"],icon:"🗑️"},
+    {name:"衣架",hints:["挂衣服的工具","衣柜常见","塑料木质的"],icon:"👔"},
+    {name:"遥控器",hints:["控制电视空调","上面很多按钮","容易找不到"],icon:"📱"},
+    {name:"电池",hints:["给小电器供电","不同型号大小","用完要回收"],icon:"🔋"},
+    {name:"灯泡",hints:["发光的玻璃球","拧在灯座上","不同瓦数"],icon:"💡"},
+    {name:"拖把",hints:["拖地用的工具","湿拖干拖都可以","经常清洗"],icon:"🧹"},
+    {name:"扫帚",hints:["扫地用的工具","和拖把配套","清除灰尘垃圾"],icon:"🧹"},
+    {name:"晾衣架",hints:["晾衣服的架子","阳台常见","可折叠伸缩"],icon:"👕"},
+    {name:"熨斗",hints:["熨烫衣服去褶皱","家用小电器","加热后小心"],icon:"👗"},
+    {name:"电风扇",hints:["夏天降温的电器","吹出凉风","落地台式都有"],icon:"🌀"},
+    {name:"暖宝宝",hints:["冬天取暖贴片","贴在衣服上发热","一次性使用"],icon:"🔥"},
+    {name:"保温杯",hints:["长时间保温的水杯","冬天外出必备","不锈钢材质"],icon:"🥤"},
+    {name:"太阳镜",hints:["遮挡阳光的眼镜","夏天开车戴","时尚配饰"],icon:"🕶️"},
+    {name:"发卡",hints:["固定发型的小饰品","女生常用","各种颜色样式"],icon:"🎀"},
+    {name:"皮带",hints:["系在裤子上固定裤子","皮革帆布都有","时尚配件"],icon:"👖"},
+    {name:"领带",hints:["系在衬衫领口的装饰","正式场合穿西装要打","各种花纹图案"],icon:"👔"},
+    {name:"徽章",hints:["佩戴在衣服上的标志","代表身份或荣誉","金属布质都有"],icon:"🏅"},
+    {name:"邮票",hints:["寄信时贴的小纸片","各种图案设计","集邮爱好者的收藏"],icon:"✉️"},
+    {name:"存钱罐",hints:["存放硬币的容器","通常是猪的形状","培养储蓄习惯"],icon:"🐷"},
+    {name:"日历",hints:["查看日期的工具","挂墙上或摆桌上","纸质电子都有"],icon:"📅"},
+    {name:"相框",hints:["装照片的框","摆家里做装饰","记录美好回忆"],icon:"🖼️"},
+    {name:"地球仪",hints:["地球的立体模型","地理课常用","看到各国位置"],icon:"🌍"},
+    {name:"望远镜",hints:["观察远处物体","天文爱好者常用","也可以看风景"],icon:"🔭"},
+    {name:"显微镜",hints:["观察微小物体","生物实验常用","看到细胞细菌"],icon:"🔬"},
+    {name:"计算器",hints:["做数学运算的工具","学生会计常用","比口算快多了"],icon:"🔢"},
+    {name:"直尺",hints:["测量长度","学生文具盒必备","有刻度线"],icon:"📏"},
+    {name:"圆规",hints:["画圆的工具","数学几何课常用","两腿可调节"],icon:"📐"},
+    {name:"橡皮擦",hints:["擦除铅笔痕迹","写字画画必备","各种形状香味"],icon:"🧹"},
+    {name:"铅笔",hints:["写字绘画工具","木头包石墨芯","削尖了用"],icon:"✏️"},
+    {name:"钢笔",hints:["书写工具","墨水笔尖","正式书写用具"],icon:"🖊️"},
+    {name:"马克笔",hints:["粗头的彩色笔","做标记画画用","颜色鲜艳醒目"],icon:"🖍️"},
+    {name:"蜡笔",hints:["儿童画画的彩色笔","蜡制成","涂色填色很好用"],icon:"🖍️"},
+    {name:"乐高积木",hints:["拼搭的塑料玩具","各种颜色形状","发挥创意拼造型"],icon:"🧱"},
+    {name:"魔方",hints:["正方体益智玩具","六面每面颜色不同","转动复原有挑战"],icon:"🎲"},
+    {name:"跳绳",hints:["运动健身器材","体育课常用","单人多人都能玩"],icon:"🪢"},
+    {name:"羽毛球拍",hints:["打羽毛球用的拍子","轻便灵活","配合羽毛球使用"],icon:"🏸"},
+    {name:"乒乓球拍",hints:["打乒乓球的拍子","中国国球","红黑两面胶皮不同"],icon:"🏓"},
+    {name:"篮球",hints:["圆形充气球","投进篮筐得分","NBA是最高联赛"],icon:"🏀"},
+    {name:"足球",hints:["黑白相间圆球","用脚踢进球门","世界杯最大赛事"],icon:"⚽"},
+    {name:"排球",hints:["隔网对抗的球类","用手击球过网","奥运会项目"],icon:"🏐"},
+    {name:"网球",hints:["用球拍的黄色小球","草地红土硬地三种场地","四大满贯赛事"],icon:"🎾"},
+    {name:"瑜伽垫",hints:["做瑜伽铺在地上的垫子","防滑缓冲","居家健身常用"],icon:"🧘"},
+    {name:"哑铃",hints:["力量训练器械","一手一个","不同重量规格"],icon:"🏋️"},
+    {name:"呼啦圈",hints:["绕腰转动的圆环","减肥塑形运动","公园大妈喜欢"],icon:"⭕"},
+    {name:"滑板",hints:["站在板上滑行","四个轮子","年轻人街头运动"],icon:"🛹"},
+    {name:"自行车",hints:["两轮脚踏车","环保健康出行","上下班代步好选择"],icon:"🚲"},
+    {name:"头盔",hints:["保护头部安全装备","骑车开车都要戴","关键时刻救命"],icon:"⛑️"},
+    {name:"帐篷",hints:["户外露营临时房子","可折叠携带","野外探险必备"],icon:"⛺"},
+    {name:"手电筒",hints:["便携照明工具","停电夜间户外用","电池供电"],icon:"🔦"},
+    {name:"打火机",hints:["产生火焰的小工具","点火点烟用","远离儿童"],icon:"🔥"},
+    {name:"风筝",hints:["放飞天空的玩具","有线牵引","春天公园很多"],icon:"🪁"},
+    {name:"气球",hints:["充气漂浮薄皮球","派对装饰常用","可做成动物形状"],icon:"🎈"},
+    {name:"烟花",hints:["点燃绽放光芒","节日庆典燃放","美丽注意安全"],icon:"🎆"},
+    {name:"灯笼",hints:["内部点亮装饰物","元宵节挂起","红色象征喜庆"],icon:"🏮"},
+    {name:"对联",hints:["春节贴门上的红纸条","上下联对仗工整","新年祝福"],icon:"🧧"},
+    {name:"红包",hints:["装钱的红色信封","过年长辈给晚辈","微信红包流行"],icon:"🧧"},
+    {name:"中国结",hints:["红色编织装饰","寓意吉祥如意","中国特色工艺品"],icon:"🎋"},
+    {name:"糖葫芦",hints:["山楂串竹签裹糖","北京传统小吃","酸酸甜甜"],icon:"🍡"},
+    {name:"风铃",hints:["风吹发出声音","挂门窗上","清脆悦耳"],icon:"🔔"},
+    {name:"八音盒",hints:["打开播放音乐","内有机械装置","精美工艺品"],icon:"🎵"},
+    {name:"沙漏",hints:["计时工具","沙子从上流到下","流完时间到"],icon:"⏳"},
+    {name:"万花筒",hints:["旋转看到不同图案","五彩缤纷","童年神奇体验"],icon:"🔮"},
+    {name:"水晶球",hints:["透明球形装饰","可能有雪花场景","占卜师道具"],icon:"🔮"},
+    {name:"奖杯",hints:["比赛获胜奖品","金色杯子","冠军象征"],icon:"🏆"},
+    {name:"奖牌",hints:["挂在脖子的奖励","金银铜三种","奥运会颁发"],icon:"🥇"},
+    {name:"皇冠",hints:["国王戴的头饰","金光闪闪","权力象征"],icon:"👑"},
+    {name:"项链",hints:["戴在脖子上的首饰","吊坠装饰","金银钻石材质"],icon:"📿"},
+    {name:"耳环",hints:["戴在耳朵上的装饰","耳钉耳坠耳圈","女生的最爱"],icon:"💎"},
+    {name:"手链",hints:["戴手腕上的装饰","珠串金属链","男女都可佩戴"],icon:"⛓️"},
+    {name:"戒指",hints:["戴手指上的环形饰物","婚戒最经典","钻石戒指贵重"],icon:"💍"},
+    {name:"胸针",hints:["别胸前装饰品","固定衣物点缀","优雅配饰"],icon:"📍"},
+    {name:"书包",hints:["学生背的书包","装课本文具","双肩背最常见"],icon:"🎒"},
+    {name:"文具盒",hints:["装笔文具的小盒子","学生必备","卡通图案"],icon:"✏️"},
+    {name:"卷笔刀",hints:["削铅笔工具","转几圈就削好","手动电动都有"],icon:"✏️"},
+    {name:"橡皮泥",hints:["儿童玩的彩色软泥","捏成各种形状","锻炼动手能力"],icon:"🟨"},
+    {name:"拼图",hints:["碎片拼完整图像","几百到几千块","考验耐心观察力"],icon:"🧩"},
+    {name:"象棋",hints:["中国传统棋类游戏","将帅士象车马炮兵","楚河汉界对阵"],icon:"♟️"},
+    {name:"围棋",hints:["黑白棋子策略游戏","19x19格棋盘","起源中国历史悠久"],icon:"⚫"},
+    {name:"扑克牌",hints:["54张纸牌游戏","多种玩法","斗地主最受欢迎"],icon:"🃏"},
+    {name:"麻将",hints:["中国国粹棋牌游戏","万条筒东南西北中发白","四人游戏"],icon:"🀄"},
+    {name:"骰子",hints:["掷出随机数字立方体","六个面1到6点","赌博桌游常用"],icon:"🎲"},
+    {name:"飞镖",hints:["投向靶心尖锐物","酒吧娱乐项目","需要精准手法"],icon:"🎯"},
+    {name:"保龄球",hints:["滚向球道的重球","击倒所有瓶柱","十全十美最高分"],icon:"🎳"},
+    {name:"台球",hints:["用球杆击球的桌上运动","斯诺克","精准控制力度方向"],icon:"🎱"},
+    {name:"滑雪板",hints:["雪地滑行的板子","双脚各一块","冬季运动热门"],icon:"🎿"},
+    {name:"溜冰鞋",hints:["底部冰刀鞋子","冰场滑行","花样滑冰优美"],icon:"⛸️"},
+    {name:"行李箱",hints:["旅行时装衣服的大箱子","有轮子方便拖拽","不同尺寸"],icon:"🧳"},
+    {name:"婴儿车",hints:["推婴儿出门的车","可坐可躺","带遮阳篷储物篮"],icon:"👶"},
+    {name:"安全座椅",hints:["汽车儿童安全椅","固定后座","保护乘车安全"],icon:"🚗"},
+    {name:"猫粮",hints:["猫咪的食物","干粮湿粮都有","猫咪的最爱"],icon:"🐱"},
+    {name:"狗粮",hints:["狗狗的食物","颗粒罐头都有","狗狗的最爱"],icon:"🐶"},
+    {name:"鱼缸",hints:["养鱼的透明容器","观赏游动的鱼","定期换水"],icon:"🐠"},
+    {name:"鱼竿",hints:["钓鱼主要工具","长杆加鱼线","需要耐心等待"],icon:"🎣"},
+    {name:"泡泡棒",hints:["吹出很多泡泡","小孩超爱玩","五颜六色梦幻"],icon:"🫧"},
+  ],
+  geo: [
+    {name:"中国",hints:["世界上人口最多的国家","有长城和熊猫","五千年文明古国"],icon:"🇨🇳"},
+    {name:"美国",hints:["自由女神像所在国","好莱坞电影发源地","硅谷科技中心"],icon:"🇺🇸"},
+    {name:"日本",hints:["樱花和富士山的国度","动漫产业发达","寿司生鱼片起源地"],icon:"🇯🇵"},
+    {name:"法国",hints:["埃菲尔铁塔所在地","时尚与浪漫之都","葡萄酒著名产区"],icon:"🇫🇷"},
+    {name:"英国",hints:["大本钟所在国家","英语的发源地","曾经的日不落帝国"],icon:"🇬🇧"},
+    {name:"德国",hints:["汽车工业强国","啤酒节发源地","严谨的工匠精神"],icon:"🇩🇪"},
+    {name:"意大利",hints:["罗马斗兽场所在国","披萨和意面故乡","文艺复兴发源地"],icon:"🇮🇹"},
+    {name:"澳大利亚",hints:["南半球的大陆国家","袋鼠和考拉的家","大堡礁世界遗产"],icon:"🇦🇺"},
+    {name:"巴西",hints:["南美洲最大国家","足球王国","亚马逊热带雨林"],icon:"🇧🇷"},
+    {name:"印度",hints:["人口第二大国","泰姬陵所在国","宝莱坞电影产业"],icon:"🇮🇳"},
+    {name:"俄罗斯",hints:["世界面积最大国家","红场克里姆林宫","芭蕾舞艺术"],icon:"🇷🇺"},
+    {name:"加拿大",hints:["枫叶之国","尼亚加拉瀑布","极光观测胜地"],icon:"🇨🇦"},
+    {name:"韩国",hints:["韩流文化输出国","泡菜和烤肉","三星现代总部"],icon:"🇰🇷"},
+    {name:"西班牙",hints:["斗牛士之国","巴塞罗那高迪建筑","热情的弗拉明戈舞"],icon:"🇪🇸"},
+    {name:"埃及",hints:["金字塔和狮身人面像","尼罗河文明","法老的神秘国度"],icon:"🇪🇬"},
+    {name:"泰国",hints:["微笑之国","佛教寺庙众多","泰式按摩闻名"],icon:"🇹🇭"},
+    {name:"新加坡",hints:["花园城市国家","东南亚金融中心","鱼尾狮地标"],icon:"🇸🇬"},
+    {name:"瑞士",hints:["钟表制造王国","阿尔卑斯山滑雪","永久中立国"],icon:"🇨🇭"},
+    {name:"荷兰",hints:["风车和郁金香之国","围海造陆专家","自行车王国"],icon:"🇳🇱"},
+    {name:"希腊",hints:["西方文明发源地","奥林匹克运动会发源地","雅典卫城帕特农神庙"],icon:"🇬🇷"},
+    {name:"长城",hints:["世界七大奇迹之一","中国标志性建筑","人类史上最浩大工程"],icon:"🏯"},
+    {name:"埃菲尔铁塔",hints:["巴黎地标建筑","高300多米钢铁结构","1889年世博会建成"],icon:"🗼"},
+    {name:"自由女神像",hints:["纽约港自由岛","法国赠送给美国","象征自由民主"],icon:"🗽"},
+    {name:"金字塔",hints:["古埃及法老陵墓","世界古代奇迹之一","最大的胡夫金字塔"],icon:"🔺"},
+    {name:"泰姬陵",hints:["印度白色大理石陵墓","莫卧儿皇帝为爱妃所建","世界新七大奇迹"],icon:"🕌"},
+    {name:"富士山",hints:["日本最高山峰","圆锥形火山","樱花季节最美"],icon:"🗻"},
+    {name:"大堡礁",hints:["世界最大珊瑚礁群","澳大利亚东海岸","潜水圣地"],icon:"🐠"},
+    {name:"威尼斯",hints:["意大利水上城市","贡多拉小船","每年举办电影节"],icon:"🚣"},
+    {name:"马尔代夫",hints:["印度洋岛国","蜜月度假天堂","水上屋特色住宿"],icon:"🏝️"},
+    {name:"撒哈拉沙漠",hints:["世界最大热沙漠","覆盖北非多国","白天极热夜晚寒冷"],icon:"🏜️"},
+    {name:"喜马拉雅山脉",hints:["世界最高山脉","珠穆朗玛峰所在","中印尼泊尔边境"],icon:"🏔️"},
+    {name:"亚马逊河",hints:["世界流量最大河流","流经南美多国","热带雨林中的生命线"],icon:"🌊"},
+    {name:"南极洲",hints:["地球最南端大陆","企鹅的家园","世界上最冷的地方"],icon:"🐧"},
+    {name:"北极",hints:["地球最北端地区","北极熊的家","极昼极夜现象"],icon:"🐻‍❄️"},
+    {name:"太平洋",hints:["世界最大海洋","占地球面积三分之一","马里亚纳海沟最深"],icon:"🌊"},
+    {name:"死海",hints:["地球上陆地最低点","盐度极高人可漂浮","约旦以色列交界"],icon:"🏖️"},
+    {name:"维多利亚瀑布",hints:["世界三大瀑布之一","赞比亚津巴布韦边界","雷鸣般的烟雾"],icon:"💦"},
+    {name:"黄石国家公园",hints:["美国第一个国家公园","间歇泉喷泉奇观","野生动物天堂"],icon:"🌋"},
+    {name:"吴哥窟",hints:["柬埔寨世界遗产","世界最大宗教建筑群","高棉帝国遗迹"],icon:"🛕"},
+    {name:"马丘比丘",hints:["秘鲁印加古城遗址","云端之城","世界新七大奇迹"],icon:"🏛️"},
+    {name:"圣托里尼",hints:["希腊爱琴海岛屿","蓝顶白墙建筑","最美日落观景点"],icon:"🌅"},
+    {name:"冰岛",hints:["北大西洋岛国","极光温泉火山","冰与火之国"],icon:"🌋"},
+    {name:"新西兰",hints:["南半球岛国","指环王拍摄地","极限运动天堂"],icon:"🇳🇿"},
+    {name:"迪拜",hints:["阿联酋最大城市","哈利法塔世界第一高楼","沙漠中建起的奇迹"],icon:"🏙️"},
+    {name:"百慕大三角",hints:["大西洋神秘区域","飞机船只神秘失踪","未解之谜"],icon:"🔺"},
+    {name:"复活节岛",hints:["智利太平洋岛屿","巨型石像摩艾石","与世隔绝的神秘之地"],icon:"🗿"},
+    {name:"科罗拉多大峡谷",hints:["美国亚利桑那州","世界自然奇观之一","层叠的彩色岩层"],icon:"🏜️"},
+    {name:"尼亚加拉瀑布",hints:["美加边境跨国瀑布","世界三大瀑布之一","壮观的水幕景观"],icon:"💦"},
+    {name:"珠穆朗玛峰",hints:["世界最高峰","海拔8848米","位于中国尼泊尔边境"],icon:"🏔️"},
+    {name:"长江",hints:["亚洲第一长河","中国母亲河之一","三峡工程所在地"],icon:"🌊"},
+    {name:"黄河",hints:["中国第二长河","中华文明摇篮","含沙量世界最高"],icon:"🌊"},
+    {name:"故宫",hints:["北京明清皇宫","世界最大宫殿建筑群","600多年历史"],icon:"🏯"},
+    {name:"兵马俑",hints:["西安秦始皇陵陪葬坑","世界第八大奇迹","千人千面陶俑军队"],icon:"🗿"},
+  ],
+  cities: [
+    {name:"成都",hints:["四川省会","熊猫基地和大熊猫繁育研究","火锅串串美食之都"],icon:"🐼"},
+    {name:"杭州",hints:["浙江省会","西湖美景","阿里巴巴总部所在地"],icon:"🏞️"},
+    {name:"武汉",hints:["湖北省会","长江汉江交汇处","热干面和樱花城市"],icon:"🌸"},
+    {name:"西安",hints:["陕西省会","十三朝古都","兵马俑所在地"],icon:"🏯"},
+    {name:"重庆",hints:["直辖市","山城雾都火锅城","长江三峡起点"],icon:"🌶️"},
+    {name:"南京",hints:["江苏省会","六朝古都","中山陵和夫子庙"],icon:"🏛️"},
+    {name:"天津",hints:["直辖市","北京门户","狗不理包子麻花"],icon:"🥟"},
+    {name:"苏州",hints:["江苏省经济强市","园林甲天下","上有天堂下有苏杭"],icon:"🏘️"},
+    {name:"长沙",hints:["湖南省会","芒果TV和湖南卫视","臭豆腐小龙虾"],icon:"🦞"},
+    {name:"郑州",hints:["河南省会","中原交通枢纽","少林寺所在省"],icon:"🥋"},
+    {name:"青岛",hints:["山东沿海城市","啤酒之城","崂山和栈桥海滨"],icon:"🍺"},
+    {name:"大连",hints:["辽宁沿海城市","北方香港","星海广场和海鲜"],icon:"🌊"},
+    {name:"宁波",hints:["浙江港口城市","书藏古今港通天下","杭州湾跨海大桥"],icon:"⚓"},
+    {name:"厦门",hints:["福建沿海城市","海上花园鼓浪屿","厦门大学最美校园"],icon:"🏝️"},
+    {name:"福州",hints:["福建省会","榕城三坊七巷","茉莉花茶之乡"],icon:"🍵"},
+    {name:"无锡",hints:["江苏太湖明珠","鼋头渚太湖风光","影视基地三国城"],icon:"🎬"},
+    {name:"合肥",hints:["安徽省会","科技创新城市","中科大所在地"],icon:"🔬"},
+    {name:"昆明",hints:["云南省会","春城四季如春","鲜花之都"],icon:"🌸"},
+    {name:"哈尔滨",hints:["黑龙江省会","冰城东方莫斯科","冰雪大世界"],icon:"❄️"},
+    {name:"济南",hints:["山东省会","泉城趵突泉","大明湖畔夏雨荷"],icon:"⛲"},
+    {name:"佛山",hints:["广东制造业重镇","黄飞鸿叶问故里","陶瓷家具之都"],icon:"🥋"},
+    {name:"东莞",hints:["广东制造业名城","世界工厂","虎门销烟发生地"],icon:"🏭"},
+    {name:"泉州",hints:["福建历史名城","海上丝绸之路起点","世界宗教博物馆"],icon:"⛪"},
+    {name:"南通",hints:["江苏江北城市","近代第一城","纺织之乡建筑之乡"],icon:"🏗️"},
+    {name:"烟台",hints:["山东沿海城市","苹果之乡","蓬莱仙境八仙过海"],icon:"🍎"},
+    {name:"温州",hints:["浙江商业城市","中国犹太人","皮鞋服装之都"],icon:"👞"},
+    {name:"沈阳",hints:["辽宁省会","东北中心城市","故宫和帅府"],icon:"🏯"},
+    {name:"贵阳",hints:["贵州省会","避暑之都","大数据产业基地"],icon:"💻"},
+    {name:"南昌",hints:["江西省会","英雄城滕王阁","八一军旗升起的地方"],icon:"🚩"},
+    {name:"常州",hints:["江苏苏南城市","恐龙园主题乐园","新能源产业基地"],icon:"🦖"},
+    {name:"唐山",hints:["河北工业城市","抗震英雄城市","陶瓷和钢铁之都"],icon:"🏭"},
+    {name:"徐州",hints:["江苏淮海中心城市","兵家必争之地","刘邦故里汉文化"],icon:"⚔️"},
+    {name:"嘉兴",hints:["浙江江南水乡","南湖红船","乌镇西塘古镇"],icon:"🛶"},
+    {name:"扬州",hints:["江苏历史文化名市","烟花三月下扬州","瘦西湖美景"],icon:"🌸"},
+    {name:"惠州",hints:["广东珠三角城市","半城山色半城湖","罗浮山和西湖"],icon:"🏞️"},
+    {name:"绍兴",hints:["浙江文化名城","鲁迅故里","黄酒和乌篷船"],icon:"🍶"},
+    {name:"中山",hints:["广东地级市","孙中山先生故里","灯都古镇"],icon:"💡"},
+    {name:"珠海",hints:["广东经济特区情侣路","渔女雕像","港珠澳大桥连接点"],icon:"🌊"},
+    {name:"台州",hints:["浙江沿海城市","天台山神仙居","民营经济活跃"],icon:"⛰️"},
+    {name:"金华",hints:["浙江中部城市","金华火腿闻名","义乌小商品市场"],icon:"🍖"},
+    {name:"保定",hints:["河北历史文化城","首都南大门","雄安新区相邻"],icon:"🏛️"},
+    {name:"潍坊",hints:["山东鸢都","国际风筝节","潍坊萝卜甜又脆"],icon:"🪁"},
+    {name:"洛阳",hints:["河南古都","牡丹花城","龙门石窟白马寺"],icon:"🌺"},
+    {name:"乌鲁木齐",hints:["新疆首府","离海洋最远城市","大巴扎和天山天池"],icon:"🏔️"},
+    {name:"兰州",hints:["甘肃省会","黄河穿城而过","兰州拉面牛肉面"],icon:"🍜"},
+    {name:"海口",hints:["海南省会","椰城热带风情","免税购物天堂"],icon:"🥥"},
+    {name:"三亚",hints:["海南旅游城市","天涯海角","亚龙湾海滩度假"],icon:"🏖️"},
+    {name:"威海",hints:["山东沿海最干净城市","刘公岛甲午战争","幸福指数极高"],icon:"🏖️"},
+    {name:"太原",hints:["山西省会","龙城晋商发源地","醋都和煤炭能源"],icon:"🏛️"},
+    {name:"石家庄",hints:["河北省会","火车拉来的城市","正定古城赵州桥"],icon:"🚂"},
+    {name:"南宁",hints:["广西首府","绿城东盟博览会","桂林山水近邻"],icon:"🌴"},
+    {name:"呼和浩特",hints:["内蒙古首府","青城乳都","草原文化交融"],icon:"🐄"},
+    {name:"拉萨",hints:["西藏首府","日光城","布达拉宫神圣之地"],icon:"🏔️"},
+    {name:"银川",hints:["宁夏首府","塞上江南","西夏王陵贺兰山"],icon:"🏜️"},
+    {name:"西宁",hints:["青海省会","夏都避暑胜地","青藏高原门户"],icon:"🏔️"},
+  ]
+};
+
+// ==================== 游戏状态 ====================
+let state = null;
+
+function initState(){
+  state={
+    level:1,chances:10,maxCh:10,streak:0,score:0,
+    q:null,hintIdx:0,history:[],usedAd:false,
+    completed:[],totalLevels:50,_used:{}
+  };
+}
+
+// ==================== 工具函数 ====================
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+
+// 相似度计算 - 支持城市距离模式
+function calcSim(input,target,targetCoords){
+  const a=input.trim().toLowerCase(), b=target.trim().toLowerCase();
+  if(!a||!b)return 1;
+  if(a===b)return 99;
+  
+  // 城市距离模式: 如果有坐标数据，使用距离算法
+  if(targetCoords&&targetCoords[0]){
+    // 先用文字相似度找到候选城市
+    const guess=pickCityByName(a,b);
+    if(guess){
+      const dist=calcDist(guess[0],guess[1],targetCoords[0],targetCoords[1]);
+      return distToProb(dist);
+    }
+  }
+  
+  // 包含关系
+  if(b.includes(a)&&a.length>=2)return Math.min(99,85+Math.floor(Math.random()*10));
+  if(a.includes(b)&&b.length>=2)return Math.min(99,80+Math.floor(Math.random()*10));
+  
+  // 编辑距离 (Levenshtein)
+  const m=[];
+  for(let i=0;i<=a.length;i++){m[i]=[i];for(let j=1;j<=b.length;j++){
+    if(i===0)m[0][j]=j;else{const c=a[i-1]===b[j-1]?0:1;m[i][j]=Math.min(m[i-1][j]+1,m[i][j-1]+1,m[i-1][j-1]+c)}
+  }}
+  const ed=m[a.length][b.length];
+  const ml=Math.max(a.length,b.length);
+  let sim=Math.round((1-ed/ml)*100);
+  
+  // 首字匹配加分
+  if(a[0]&&b[0]&&a[0]===b[0])sim+=10;
+  // 长度差异惩罚
+  sim-=Math.abs(a.length-b.length)*2;
+  // 字符重叠加分
+  const bc=[...new Set(b.split(''))];
+  let mc=0;for(const ch of bc){if(a.includes(ch))mc++}
+  sim+=Math.floor((mc/bc.length)*15);
+  
+  return Math.min(99,Math.max(1,sim));
+}
+
+// 根据用户输入的城市名找到对应坐标
+function pickCityByName(input,target){
+  // 找和输入最接近的城市名
+  let best=null,bestScore=0;
+  for(const [name,coords] of Object.entries(CITY_COORDS)){
+    const n=name.toLowerCase();
+    if(n===input)return coords;
+    if(input.length>=2&&(n.includes(input)||n.startsWith(input))){
+      const score=input.length*2-(Math.abs(coords[0]||0)-30)**2/100;
+      if(score>bestScore){{bestScore=score;best=coords;}
+    }
+  }
+  return best;
+}
+
+function probColor(p){
+  if(p>=95)return'linear-gradient(135deg,#fdcb6e,#f39c12)';
+  if(p>=70)return'linear-gradient(135deg,#00cec9,#81ecec)';
+  if(p>=40)return'linear-gradient(135deg,#fdcb6e,#f39c12)';
+  return'linear-gradient(135deg,#6c5ce7,#a29bfe)';
+}
+
+function probClass(p){
+  if(p>=70)return'color:var(--success)';
+  if(p>=35)return'color:var(--gold)';
+  return'color:var(--text2)';
+}
+
+// ==================== UI渲染 ====================
+function renderBg(){
+  const bg=document.getElementById('bg');
+  bg.innerHTML='';
+  for(let i=0;i<10;i++){
+    const p=document.createElement('div');
+    p.className='particle';
+    p.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;
+      width:${8+Math.random()*24}px;height:${8+Math.random()*24}px;
+      background:${['#6c5ce7','#00cec9','#fdcb6e','#ff6b6b'][Math.floor(Math.random()*4)]};
+      animation-delay:${Math.random()*-20}s;animation-duration:${15+Math.random()*18}s`;
+    bg.appendChild(p);
+  }
+}
+
+function renderDots(){
+  const c=document.getElementById('dots');c.innerHTML='';
+  for(let i=1;i<=state.totalLevels;i++){
+    const d=document.createElement('div');
+    d.className='dot'+(state.completed.includes(i)?' done':'')+(i===state.level?' cur':'');
+    c.appendChild(d);
+  }
+}
+
+function renderChances(){
+  const c=document.getElementById('chDots');c.innerHTML='';
+  for(let i=0;i<state.maxCh;i++){
+    const d=document.createElement('div');
+    d.className='cd'+(i>=state.chances?' u':'')+(state.chances<=3&&i<state.chances?' lo':'');
+    c.appendChild(d);
+  }
+}
+
+function renderQ(){
+  const q=state.q;
+  document.getElementById('lvNum').textContent=`Lv.${state.level}`;
+  const typeMap={item:['物品','t-item','📦'],geo:['地理','t-geo','🌍'],city:['城市','t-city','🏙️']};
+  const t=typeMap[q.type];
+  document.getElementById('lvType').textContent=t[0];document.getElementById('lvType').className='lv-type '+t[1];
+  document.getElementById('qBadge').textContent=t[2]+' '+t[0];document.getElementById('qBadge').className='q-badge '+t[1];
+  document.getElementById('qIcon').textContent=q.icon;
+  document.getElementById('qHint').textContent=q.hints[state.hintIdx||0];
+  document.getElementById('hintBtn').style.display=(q.hints&&q.hints.length>1)?'block':'none';
+  
+  const card=document.getElementById('qCard');
+  card.classList.remove('pop');void card.offsetWidth;card.classList.add('pop');
+}
+
+function renderStats(){
+  document.getElementById('svLv').textContent=`${state.level}/${state.totalLevels}`;
+  document.getElementById('svStk').textContent=state.streak;
+  document.getElementById('svSc').textContent=state.score;
+}
+
+function renderHist(){
+  const c=document.getElementById('hist');c.innerHTML='';
+  if(!state.history||!state.history.length){c.style.display='none';return}
+  c.style.display='block';
+  const recent=state.history.slice(-8);
+  for(const h of recent){
+    const d=document.createElement('div');d.className='hi';
+    d.innerHTML=`<span class="hi-a">${escHtml(h.a)}</span><span class="hi-p" style="${probClass(h.p)}">${h.p}%</span>`;
+    c.appendChild(d);
+  }
+  c.scrollTop=c.scrollHeight;
+}
+
+function escHtml(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+function updateProbBar(p){
+  const bar=document.getElementById('probFill');
+  bar.style.width=p+'%';
+  bar.style.background=probColor(p);
+  bar.textContent=p+'%';
+  document.getElementById('probTxt').textContent=p+'% 匹配度';
+  document.getElementById('probTxt').style.color=p>=70?'var(--success)':p>=35?'var(--gold)':'var(--text2)';
+}
+
+// ==================== 城市坐标系统 (用于方向和距离提示) ====================
+const CITY_COORDS = {
+  // 格式: 城市名: [纬度, 经度, 区域方向, 是否沿海]
+  "成都": [30.57, 104.07, "西南内陆"],
+  "杭州": [30.27, 120.15, "东南沿海"],
+  "武汉": [30.58, 114.31, "中部长江"],
+  "西安": [34.34, 108.94, "西北内陆"],
+  "重庆": [29.56, 106.55, "西南内陆"],
+  "南京": [32.06, 118.79, "东部长江"],
+  "天津": [39.12, 117.20, "北方沿海"],
+  "苏州": [31.30, 120.59, "东南沿海"],
+  "长沙": [28.23, 112.94, "中部内陆"],
+  "郑州": [34.76, 113.63, "中原内陆"],
+  "青岛": [36.07, 120.38, "北方沿海"],
+  "大连": [39.01, 121.58, "北方沿海"],
+  "宁波": [29.87, 121.55, "东南沿海"],
+  "厦门": [24.48, 118.08, "南方沿海"],
+  "福州": [26.08, 119.30, "东南沿海"],
+  "无锡": [31.49, 120.29, "东南沿海"],
+  "合肥": [31.82, 117.23, "中部内陆"],
+  "昆明": [25.04, 102.72, "西南内陆"],
+  "哈尔滨": [45.80, 126.53, "东北内陆"],
+  "济南": [36.65, 117.12, "北方内陆"],
+  "佛山": [23.02, 113.13, "南方沿海"],
+  "东莞": [23.02, 113.75, "南方沿海"],
+  "泉州": [24.78, 118.64, "南方沿海"],
+  "南通": [32.01, 120.89, "东部沿海"],
+  "烟台": [37.52, 121.39, "北方沿海"],
+  "温州": [27.99, 120.70, "东南沿海"],
+  "沈阳": [41.81, 123.43, "东北内陆"],
+  "贵阳": [26.65, 106.63, "西南内陆"],
+  "南昌": [28.68, 115.86, "中部内陆"],
+  "常州": [31.81, 119.97, "东部沿海"],
+  "唐山": [39.63, 118.18, "北方内陆"],
+  "徐州": [34.21, 117.29, "中原内陆"],
+  "嘉兴": [30.75, 120.76, "东部沿海"],
+  "扬州": [32.39, 119.43, "东部内陆"],
+  "惠州": [23.11, 114.42, "南方沿海"],
+  "绍兴": [30.00, 120.58, "东部沿海"],
+  "中山": [22.52, 113.39, "南方沿海"],
+  "珠海": [22.28, 113.58, "南方沿海"],
+  "台州": [28.66, 121.43, "东南沿海"],
+  "金华": [29.08, 119.65, "东部内陆"],
+  "保定": [38.87, 115.48, "北方内陆"],
+  "潍坊": [36.71, 119.16, "北方沿海"],
+  "洛阳": [34.62, 112.45, "中原内陆"],
+  "乌鲁木齐": [43.83, 87.62, "西北内陆"],
+  "兰州": [36.06, 103.84, "西北内陆"],
+  "海口": [20.04, 110.35, "南方沿海"],
+  "三亚": [18.25, 109.51, "南方沿海"],
+  "威海": [37.51, 122.12, "北方沿海"],
+  "太原": [37.87, 112.55, "北方内陆"],
+  "石家庄": [38.04, 114.51, "北方内陆"],
+  "南宁": [22.82, 108.37, "南方内陆"],
+  "呼和浩特": [40.84, 111.75, "北方内陆"],
+  "拉萨": [29.65, 91.10, "西部内陆"],
+  "银川": [38.47, 106.23, "西北内陆"],
+  "西宁": [36.62, 101.78, "西北内陆"]
+};
+
+// Haversine公式计算两点间距离(km)
+function calcDist(lat1,lon1,lat2,lon2){
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)*Math.sin(dLat/2)+
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
+    Math.sin(dLon/2)*Math.sin(dLon/2);
+  const c=2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+  return R*c;
+}
+// 根据距离计算匹配��(km->%)
+function distToProb(km){
+  if(km<50)return 95+Math.floor(Math.random()*4);
+  if(km<150)return 85+Math.floor(Math.random()*10);
+  if(km<300)return 70+Math.floor(Math.random()*15);
+  if(km<500)return 55+Math.floor(Math.random()*15);
+  if(km<800)return 40+Math.floor(Math.random()*15);
+  return Math.max(5,25+Math.floor((800-km)/40));
+}
+// 计算方向描述
+function getDirHint(targetLat,targetLon,guessLat,guessLon){
+  const dLat=guessLat-targetLat;
+  const dLon=guessLon-targetLon;
+  let dir="";
+  if(Math.abs(dLon)>Math.abs(dLat)){
+    dir=dLon>0?"东":"西";
+  }else{
+    dir=dLat>0?"南":"北";
+  }
+  const dist=Math.abs(dLon)>Math.abs(dLat)?Math.abs(dLon):Math.abs(dLat);
+  if(dist>5)dir+="偏"+(dist>8?"远":"近");
+  return dir?`答案在你猜测方向的${dir}面`:"你在答案附近";
+}
+function genQuestion(){
+  // typeKey映射：数据库key是复数形式
+  const typeKeys=[{k:'items',t:'item'},{k:'geo',t:'geo'},{k:'cities',t:'city'}];
+  const picked=pick(typeKeys);
+  const pool=DB[picked.k];
+  if(!pool||!pool.length){console.error('Empty pool:',picked.k);return{name:'未知',hints:['加载失败'],icon:'❓',type:'item'}}
+  
+  // 尽量选没用过的题目
+  let available=pool.filter(x=>!state._used[x.name]);
+  if(available.length<3)available=pool;
+  
+  const q=pick(available);
+  q.type=picked.t;
+  state._used[q.name]=true;
+  return q;
+}
+
+function nextHint(){
+  if(!state.q||!state.q.hints||state.q.hints.length<=1)return;
+  state.hintIdx=(state.hintIdx||0)+1;
+  if(state.hintIdx>=state.q.hints.length)state.hintIdx=0;
+  document.getElementById('qHint').textContent=state.q.hints[state.hintIdx];
+}
+
+function submitAns(){
+  const input=document.getElementById('ansInput');
+  if(!input)return;
+  const val=(input.value||'').trim();
+  if(!val){input.classList.add('shake');setTimeout(()=>input.classList.remove('shake'),400);input.focus();return}
+  if(state.chances<=0)return;
+  
+  state.chances--;
+  const targetCoords=state.q.type==='city'?CITY_COORDS[state.q.name]:null;
+  const prob=calcSim(val,state.q.name,targetCoords);
+  state.history.push({a:val,p:prob});
+  
+  updateProbBar(prob);
+  renderHist();
+  renderChances();
+  input.value='';
+  input.focus();
+  document.getElementById('inHint').textContent=prob>=70?'🔥 很接近了！再试试！':prob>=40?'🤔 方向对了，继续加油！':'💪 再想想，换个角度？';
+  
+  if(prob>=95){
+    setTimeout(()=>showResult(true),500);
+  }else if(state.chances<=0){
+    setTimeout(()=>showResult(false),600);
+  }
+}
+
+function showResult(win){
+  const o=document.getElementById('overlay');
+  const icon=document.getElementById('mIcon'),title=document.getElementById('mTitle'),
+    desc=document.getElementById('mDesc'),ans=document.getElementById('mAnswer'),
+    av=document.getElementById('mAv'),btn=document.getElementById('mBtn');
+  
+  if(win){
+    const bonus=(state.chances*10)+(state.streak*5)-(state.usedAd?30:0);
+    const pts=100+Math.max(0,bonus);
+    state.score+=pts;
+    state.streak++;
+    state.completed.push(state.level);
+    
+    icon.textContent=state.streak>=3?'🔥':state.streak>=5?'⚡':'🎉';
+    title.textContent=state.streak>=3?`${state.streak}连胜！`:'恭喜过关！';
+    desc.textContent=`匹配成功！本关得分 ${pts} 分`;
+    ans.style.display='none';
+    
+    if(state.level>=state.totalLevels){
+      btn.textContent='查看成绩 🏆';
+      btn.onclick=showFinal;
+    }else{
+      btn.textContent='下一关 →';
+      btn.onclick=nxtLv;
+    }
+    
+    fireConfetti();
+  }else{
+    state.streak=0;
+    icon.textContent='💔';title.textContent='挑战失败';
+    desc.textContent=`机会用完了！正确答案是：`;
+    ans.style.display='block';av.textContent=state.q.name+' '+(state.q.icon||'');
+    btn.textContent='再试一次 💪';
+    btn.onclick=nxtLv;
+  }
+  
+  o.classList.add('show');
+  renderStats();renderDots();
+}
+
+function nxtLv(){
+  document.getElementById('overlay').classList.remove('show');
+  if(state.level<state.totalLevels||(state.completed.includes(state.level))){
+    state.level++;
+  }
+  state.chances=state.maxCh;state.history=[];state.hintIdx=0;state.usedAd=false;
+  state.q=genQuestion();
+  document.getElementById('probFill').style.width='0%';
+  document.getElementById('probFill').textContent='0%';
+  document.getElementById('probTxt').textContent='输入答案开始';
+  document.getElementById('probTxt').style.color='var(--text2)';
+  document.getElementById('hist').style.display='none';
+  document.getElementById('inHint').textContent='💡 输入你的猜测，越接近答案概率越高！';
+  document.getElementById('adBtn').disabled=false;
+  renderAll();
+  // 聚焦输入框
+  setTimeout(()=>{const inp=document.getElementById('ansInput');if(inp)inp.focus()},300);
+}
+
+function showFinal(){
+  document.getElementById('overlay').classList.remove('show');
+  const o=document.getElementById('overlay');
+  const icon=document.getElementById('mIcon'),title=document.getElementById('mTitle'),
+    desc=document.getElementById('mDesc'),ans=document.getElementById('mAnswer'),
+    btn=document.getElementById('mBtn');
+  
+  let rank='',rIcon='';
+  if(state.score>=4500){rank='🏆 猜测大师';rIcon='👑'}
+  else if(state.score>=3500){rank='🥇 猜测专家';rIcon='🌟'}
+  else if(state.score>=2500){rank='🥈 猜猜高手';rIcon='💎'}
+  else if(state.score>=1500){rank='🥉 猜猜新秀';rIcon='🎯'}
+  else{rank='💪 继续努力';rIcon='💪'}
+  
+  icon.textContent=rIcon;
+  title.textContent='🎊 全部通关！';
+  title.style.cssText='background:linear-gradient(135deg,#fdcb6e,#ff6b6e,#6c5ce7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:24px';
+  desc.innerHTML=`最终得分：<strong style="color:var(--gold);font-size:20px">${state.score}</strong> 分<br><br>${rank}`;
+  ans.style.display='none';
+  btn.textContent='重新开始 🔄';
+  btn.onclick=()=>{location.reload()};
+  
+  o.classList.add('show');
+  fireConfetti();fireConfetti();
+}
+
+// ==================== 广告系统 ====================
+let adTimer=null;
+function watchAd(){
+  if(state.usedAd)return;
+  const ao=document.getElementById('adOverlay');
+  ao.classList.add('show');
+  let cnt=5;
+  document.getElementById('adCount').textContent=cnt;
+  if(adTimer)clearInterval(adTimer);
+  adTimer=setInterval(()=>{
+    cnt--;
+    document.getElementById('adCount').textContent=cnt;
+    if(cnt<=0){
+      clearInterval(adTimer);adTimer=null;
+      ao.classList.remove('show');
+      state.chances+=3;
+      state.usedAd=true;
+      state.score=Math.max(0,state.score-30);
+      document.getElementById('adBtn').disabled=true;
+      renderChances();
+      renderStats();
+      document.getElementById('inHint').textContent='📺 +3次机会已获得！（-30分）';
+    }
+  },1000);
+}
+
+// ==================== 撒花特效 ====================
+function fireConfetti(){
+  const cv=document.getElementById('confetti');
+  if(!cv)return;
+  const ctx=cv.getContext('2d');
+  cv.width=window.innerWidth;cv.height=window.innerHeight;
+  const particles=[];
+  const colors=['#6c5ce7','#a29bfe','#00cec9','#fdcb6e','#ff6b6b','#81ecec','#ffeaa7'];
+  for(let i=0;i<70;i++){
+    particles.push({
+      x:cv.width/2,y:cv.height/2,
+      vx:(Math.random()-0.5)*14,vy:(Math.random()-0.5)*14-8,
+      g:.25,size:4+Math.random()*7,c:colors[Math.floor(Math.random()*colors.length)],
+      rot:Math.random()*360,rs:(Math.random()-0.5)*10,a:1
+    });
+  }
+  function tick(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    let alive=false;
+    for(const p of particles){
+      p.vy+=p.g;p.x+=p.vx;p.y+=p.vy;p.rot+=p.rs;p.a-=.008;
+      if(p.a>0){alive=true;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);
+        ctx.globalAlpha=Math.max(0,p.a);ctx.fillStyle=p.c;
+        ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*.6);ctx.restore()}
+    }
+    if(alive)requestAnimationFrame(tick);else ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  tick();
+}
+
+// ==================== 初始化 ====================
+function renderAll(){
+  renderStats();renderDots();renderChances();renderQ();
+}
+
+function init(){
+  try {
+    initState();
+    renderBg();
+    state.q=genQuestion();
+    
+    if(!state.q||!state.q.name){
+      document.getElementById('qHint').textContent='⚠️ 题目加载失败，请刷新页面';
+      console.error('Question generation failed');
+      return;
+    }
+    
+    renderAll();
+    
+    // ===== 关键修复：事件绑定 =====
+    const ansInput=document.getElementById('ansInput');
+    const goBtn=document.getElementById('goBtn');
+    
+    // 回车键提交
+    if(ansInput){
+      ansInput.addEventListener('keydown',function(e){
+        if(e.key==='Enter'||e.keyCode===13){
+          e.preventDefault();
+          submitAns();
+        }
+      });
+      
+      // 实时预览概率
+      ansInput.addEventListener('input',function(e){
+        const v=(e.target.value||'').trim();
+        if(v&&state.q){
+          const targetCoords=state.q.type==='city'?CITY_COORDS[state.q.name]:null;
+          const p=calcSim(v,state.q.name,targetCoords);
+          updateProbBar(p);
+        }
+      });
+      
+      // 自动聚焦
+      ansInput.addEventListener('focus',function(){});
+    }
+    
+    // 提交按钮点击
+    if(goBtn){
+      goBtn.addEventListener('click',function(e){
+        e.preventDefault();
+        submitAns();
+      });
+    }
+    
+    // 页面加载后聚焦输入框
+    setTimeout(function(){
+      if(ansInput)ansInput.focus();
+    },500);
+    
+  } catch(err){
+    console.error('Init error:',err);
+    document.getElementById('qHint').textContent='⚠️ 游戏初始化失败：'+err.message;
+  }
+}
+
+// 确保 DOM 加载完成后初始化
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',init);
+}else{
+  init();
+}
+</script>
+</body>
+</html>

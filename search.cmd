@@ -1,0 +1,1 @@
+node "C:\Program Files\QClaw\resources\openclaw\config\skills\online-search\scripts\prosearch.cjs" "{\"keyword\":\"GitHub skill.md AI agent prompt engineering\",\"site\":\"github.com\"}"

@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>迷宫守护者 V2.0</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0ff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center;touch-action:none}
+canvas{display:block;image-rendering:pixelated}
+
+/* 顶部状态栏 */
+#topbar{position:fixed;top:0;left:0;right:0;padding:8px 15px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(180deg,rgba(10,10,30,0.95),rgba(10,10,30,0));z-index:10}
+.stat{display:flex;align-items:center;gap:4px;font-size:14px;font-weight:bold}
+.stat .icon{font-size:18px}
+.stat .value{color:#FFD700}
+#wave-progress{position:fixed;top:45px;left:50%;transform:translateX(-50%);width:150px;height:4px;background:#333;border-radius:2px;z-index:10}
+#wave-progress .fill{height:100%;background:linear-gradient(90deg,#4ECDC4,#FFB347);border-radius:2px;transition:width 0.3s}
+
+/* BOSS血条 */
+#boss-bar{position:fixed;top:55px;left:50%;transform:translateX(-50%);width:200px;display:none;z-index:15}
+#boss-bar .container{height:10px;background:#333;border-radius:5px;border:2px solid #FF6B6B}
+#boss-bar .fill{height:100%;background:linear-gradient(90deg,#FF6B6B,#FF4757);border-radius:3px;transition:width 0.3s}
+#boss-bar .label{text-align:center;font-size:12px;color:#FF6B6B;margin-top:4px;font-weight:bold}
+
+/* 底部塔选择面板 */
+#tower-panel{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10;padding:8px;background:rgba(10,10,30,0.9);border-radius:12px;border:1px solid rgba(78,205,196,0.3)}
+.tower-btn{width:52px;height:52px;border-radius:10px;border:2px solid #4ECDC4;background:rgba(10,10,30,0.9);color:#4ECDC4;font-size:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all 0.2s;position:relative}
+.tower-btn:hover,.tower-btn.selected{background:rgba(78,205,196,0.2);box-shadow:0 0 15px #4ECDC4;transform:scale(1.05)}
+.tower-btn .emoji{font-size:20px}
+.tower-btn .cost{font-size:10px;color:#FFD700;margin-top:2px}
+.tower-btn.locked{opacity:0.4;cursor:not-allowed}
+.tower-btn.locked::after{content:'🔒';position:absolute;top:2px;right:2px;font-size:10px}
+
+/* 塔信息面板 */
+#tower-info{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.95);border:1px solid #4ECDC4;border-radius:12px;padding:12px 16px;display:none;z-index:20;min-width:180px}
+#tower-info h4{color:#FFB347;margin-bottom:8px;font-size:14px}
+#tower-info .stats{font-size:12px;color:#aaa;line-height:1.6}
+#tower-info .actions{display:flex;gap:8px;margin-top:10px}
+#tower-info button{flex:1;padding:8px;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:bold}
+#btn-upgrade{background:linear-gradient(135deg,#4ECDC4,#44a08d);color:#fff}
+#btn-sell{background:linear-gradient(135deg,#FF6B6B,#ee5a5a);color:#fff}
+#btn-upgrade.highlight-pulse{animation:pulse 0.5s infinite}
+
+/* 波次提示 */
+#wave-announce{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:36px;font-weight:bold;color:#FF6B6B;text-shadow:0 0 30px #FF6B6B;display:none;z-index:30;animation:waveIn 1.5s forwards}
+@keyframes waveIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0}}
+@keyframes pulse{0%,100%{box-shadow:0 0 5px #4ECDC4}50%{box-shadow:0 0 20px #4ECDC4}}
+
+/* 技能选择 */
+#skill-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,30,0.98);border:2px solid #FFB347;border-radius:16px;padding:20px;display:none;z-index:50;min-width:280px}
+#skill-panel h3{color:#FFB347;text-align:center;margin-bottom:15px;font-size:16px}
+.skill-btn{display:block;width:100%;padding:12px;margin:8px 0;background:linear-gradient(135deg,#1a1a3e,#2a2a5e);border:1px solid #4ECDC4;color:#fff;border-radius:8px;font-size:13px;cursor:pointer;text-align:left;transition:all 0.2s}
+.skill-btn:hover{background:linear-gradient(135deg,#2a2a5e,#3a3a7e);border-color:#FFB347}
+.skill-btn b{color:#4ECDC4}
+
+/* 结算界面 */
+#result{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:60}
+#result h1{font-size:32px;margin-bottom:20px}
+#result.success h1{color:#4ECDC4;text-shadow:0 0 20px #4ECDC4}
+#result.fail h1{color:#FF6B6B;text-shadow:0 0 20px #FF6B6B}
+#result p{color:#aaa;font-size:16px;margin:8px}
+#result b{color:#FFD700}
+#result .btn-group{display:flex;gap:15px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+#result button{padding:14px 30px;border:none;border-radius:30px;font-size:14px;cursor:pointer;font-weight:bold}
+#result .btn-retry{background:linear-gradient(135deg,#4ECDC4,#44a08d);color:#fff}
+#result .btn-share{background:linear-gradient(135deg,#FFB347,#FF6B6B);color:#fff}
+#result .btn-menu{background:linear-gradient(135deg,#666,#444);color:#fff}
+
+/* 主菜单 */
+#menu{position:fixed;inset:0;background:radial-gradient(ellipse at center,#1a1a4a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;overflow-y:auto}
+#menu .logo{font-size:28px;color:#4ECDC4;text-shadow:0 0 30px #4ECDC4;margin-bottom:8px;font-weight:bold}
+#menu .version{color:#666;font-size:12px;margin-bottom:30px}
+#menu .section{margin-bottom:20px;width:280px}
+#menu .section-title{color:#FFB347;font-size:14px;margin-bottom:10px;font-weight:bold}
+#menu .level-list{display:flex;flex-direction:column;gap:8px}
+#menu .level-btn{padding:14px 20px;background:linear-gradient(135deg,#1a1a3e,#2a2a5e);border:1px solid #4ECDC4;color:#fff;border-radius:8px;font-size:14px;cursor:pointer;text-align:center;transition:all 0.2s}
+#menu .level-btn:hover:not(.locked){background:linear-gradient(135deg,#2a2a5e,#3a3a7e);box-shadow:0 0 15px #4ECDC4}
+#menu .level-btn.locked{opacity:0.5;cursor:not-allowed;border-color:#666}
+#menu .level-btn .highscore{color:#FFD700;font-size:11px;display:block;margin-top:4px}
+#menu .endless-btn{background:linear-gradient(135deg,#FF6B6B,#FF4757);border-color:#FF6B6B}
+#menu .tips{color:#555;font-size:11px;text-align:center;line-height:1.8;padding:0 20px}
+
+/* 引导气泡 */
+#guide-tip{position:fixed;background:rgba(255,179,71,0.95);color:#0a0a1a;padding:10px 16px;border-radius:8px;font-size:13px;font-weight:bold;z-index:100;display:none;max-width:250px;text-align:center}
+#guide-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#FFB347}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- 顶部状态栏 -->
+<div id="topbar">
+  <div class="stat"><span class="icon">💰</span><span id="gold">100</span></div>
+  <div class="stat"><span class="icon">🌊</span><span id="wave">1</span></div>
+  <div class="stat"><span class="icon">❤️</span><span id="hp">20</span></div>
+</div>
+<div id="wave-progress"><div class="fill" id="progress-fill"></div></div>
+
+<!-- BOSS血条 -->
+<div id="boss-bar">
+  <div class="container"><div class="fill" id="boss-fill"></div></div>
+  <div class="label">👹 暗影魔王</div>
+</div>
+
+<!-- 波次提示 -->
+<div id="wave-announce"></div>
+
+<!-- 引导提示 -->
+<div id="guide-tip"></div>
+
+<!-- 塔选择面板 -->
+<div id="tower-panel"></div>
+
+<!-- 塔信息面板 -->
+<div id="tower-info">
+  <h4 id="tower-name">象牙弓手 Lv.1</h4>
+  <div class="stats" id="tower-stats">伤害: 15 | 射程: 3</div>
+  <div class="actions">
+    <button id="btn-upgrade">升级</button>
+    <button id="btn-sell">出售</button>
+  </div>
+</div>
+
+<!-- 技能选择 -->
+<div id="skill-panel">
+  <h3>⚡ 选择强化</h3>
+  <div id="skill-list"></div>
+</div>
+
+<!-- 结算界面 -->
+<div id="result">
+  <h1 id="result-title">游戏结束</h1>
+  <p>波次: <b id="result-wave">0</b></p>
+  <p>击杀: <b id="result-kills">0</b></p>
+  <p id="result-reward"></p>
+  <div class="btn-group">
+    <button class="btn-retry" id="btn-retry">再来一次</button>
+    <button class="btn-share" id="btn-share">分享成绩</button>
+    <button class="btn-menu" id="btn-menu">返回菜单</button>
+  </div>
+</div>
+
+<!-- 主菜单 -->
+<div id="menu">
+  <div class="logo">🏰 迷宫守护者</div>
+  <div class="version">V2.0 腾讯级品质</div>
+  
+  <div class="section">
+    <div class="section-title">📜 新手关卡</div>
+    <div class="level-list" id="level-list"></div>
+  </div>
+  
+  <div class="section">
+    <div class="level-btn endless-btn" id="btn-endless">⚔️ 无尽挑战</div>
+  </div>
+  
+  <div class="tips">
+    🐘弓手 · 🐻炮塔 · 🐰冰冻 · 🦁火焰 · 🐒闪电 · 🐉龙息<br>
+    点击格子放置 · 长按塔查看详情 · 3塔合成超级形态
+  </div>
+</div>
+
+<script>
+// ===== 游戏核心配置 =====
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+// 游戏尺寸
+let W, H, S, Cols, Rows;
+
+// 游戏状态
+let gameState = 'menu';
+let gold = 100, hp = 20, maxHp = 20, wave = 0, kills = 0;
+let maze = [], towers = [], enemies = [], bullets = [], particles = [];
+let selectedTowerType = null, selectedTower = null;
+let shaking = 0, bossRef = null, bossMaxHp = 0;
+let enemiesThisWave = 0, enemiesKilled = 0;
+let guideText = '';
+
+// ===== 配置 =====
+const TOWER_CONFIG = {
+  archer: { name: '象牙弓手', emoji: '🐘', cost: 50, color: '#FFB347', attack: 'arrow',
+    levels: [{dmg:15,rng:3,spd:1,upgCost:40},{dmg:30,rng:3.5,spd:1.2,upgCost:80},{dmg:60,rng:4,spd:1.5}] },
+  cannon: { name: '熊熊炮塔', emoji: '🐻', cost: 100, color: '#8B4513', attack: 'explosion',
+    levels: [{dmg:25,rng:2.5,spd:0.8,aoe:1.2,upgCost:80},{dmg:50,rng:3,spd:0.8,aoe:1.5,upgCost:160},{dmg:100,rng:3.5,spd:0.8,aoe:2}] },
+  freeze: { name: '兔兔冰冻', emoji: '🐰', cost: 80, color: '#E0FFFF', attack: 'ice',
+    levels: [{dmg:8,rng:2.5,spd:0.7,slow:0.3,upgCost:60},{dmg:15,rng:3,spd:0.7,slow:0.5,upgCost:120},{dmg:30,rng:3.5,spd:0.7,slow:0.7}] },
+  flame: { name: '狮王烈焰', emoji: '🦁', cost: 200, color: '#FF4500', attack: 'flame',
+    levels: [{dmg:40,rng:2.5,spd:0.5,pierce:1,upgCost:150},{dmg:80,rng:3,spd:0.5,pierce:2,upgCost:300},{dmg:160,rng:3.5,spd:0.5,pierce:3}] },
+  lightning: { name: '猴王闪电', emoji: '🐒', cost: 150, color: '#FFD700', attack: 'lightning',
+    levels: [{dmg:20,rng:2.5,spd:0.6,chain:2,upgCost:120},{dmg:40,rng:3,spd:0.6,chain:3,upgCost:240},{dmg:80,rng:3.5,spd:0.6,chain:4}] },
+  dragon: { name: '龙神终结', emoji: '🐉', cost: 300, color: '#4B0082', attack: 'laser',
+    levels: [{dmg:50,rng:3,spd:0.4,boss:0.5,upgCost:250},{dmg:100,rng:3.5,spd:0.4,boss:1,upgCost:500},{dmg:200,rng:4,spd:0.4,boss:2}] }
+};
+
+const ENEMY_CONFIG = {
+  mushroom: { name: '🍄', hp: 50, speed: 1.0, gold: 5, size: 0.6, color: '#8FBC8F' },
+  pumpkin: { name: '🎃', hp: 150, speed: 0.7, gold: 15, size: 0.75, color: '#FFA500', shield: true },
+  ghost: { name: '👻', hp: 300, speed: 0.9, gold: 30, size: 0.9, color: '#9370DB', dodge: true },
+  statue: { name: '🗿', hp: 800, speed: 0.4, gold: 80, size: 1.2, color: '#708090', armor: 0.3 },
+  boss: { name: '👹', hp: 5000, speed: 0.3, gold: 500, size: 1.5, color: '#4B0082', boss: true }
+};
+
+const LEVELS = [
+  { id: 'level1', name: '第1关：初识守护', unlocked: true, enemyCount: 3, hp: 50 },
+  { id: 'level2', name: '第2关：塔的力量', unlocked: true, enemyCount: 6, hp: 60 },
+  { id: 'level3', name: '第3关：敌人入侵', unlocked: false, enemyCount: 10, hp: 70, requires: 'level2' },
+  { id: 'level4', name: '第4关：策略搭配', unlocked: false, enemyCount: 15, hp: 80, requires: 'level3' },
+  { id: 'level5', name: '第5关：魔王降临', unlocked: false, hasBoss: true, hp: 100, requires: 'level4' }
+];
+
+const SKILLS = [
+  { name: '伤害+20%', desc: '所有塔伤害+20%', apply: () => towers.forEach(t => t.dmgBonus = (t.dmgBonus||0) + 0.2) },
+  { name: '金币+50', desc: '立即获得50金币', apply: () => gold += 50 },
+  { name: '治疗+5', desc: '恢复5点生命', apply: () => hp = Math.min(hp + 5, maxHp) },
+  { name: '全屏减速', desc: '所有敌人减速50% 10秒', apply: () => enemies.forEach(e => e.slowTimer = 600) }
+];
+
+// ===== 初始化 =====
+function init() {
+  resize();
+  loadProgress();
+  renderMenu();
+  requestAnimationFrame(update);
+  
+  // 事件绑定
+  canvas.addEventListener('click', onClick);
+  canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+  
+  document.getElementById('btn-upgrade').onclick = upgradeTower;
+  document.getElementById('btn-sell').onclick = sellTower;
+  document.getElementById('btn-retry').onclick = retry;
+  document.getElementById('btn-share').onclick = shareResult;
+  document.getElementById('btn-menu').onclick = showMenu;
+  document.getElementById('btn-endless').onclick = () => startGame('endless');
+}
+
+function resize() {
+  W = Math.min(window.innerWidth, 480);
+  H = Math.min(window.innerHeight, 800);
+  S = Math.floor(W / 9);
+  Cols = 9;
+  Rows = Math.floor(H / S);
+  canvas.width = W;
+  canvas.height = H;
+}
+
+// ===== 存档 =====
+function loadProgress() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mazeGuardian_v2') || '{}');
+    LEVELS.forEach(lvl => {
+      if (saved.completed && saved.completed.includes(lvl.id)) {
+        lvl.unlocked = true;
+      }
+    });
+  } catch(e) {}
+}
+
+function saveProgress(levelId) {
+  try {
+    const saved = JSON.parse(localStorage.getItem('mazeGuardian_v2') || '{}');
+    if (!saved.completed) saved.completed = [];
+    if (!saved.completed.includes(levelId)) {
+      saved.completed.push(levelId);
+      localStorage.setItem('mazeGuardian_v2', JSON.stringify(saved));
+    }
+  } catch(e) {}
+}
+
+// ===== 菜单 =====
+function renderMenu() {
+  const list = document.getElementById('level-list');
+  list.innerHTML = LEVELS.map(lvl => `
+    <div class="level-btn ${lvl.unlocked ? '' : 'locked'}" onclick="${lvl.unlocked ? `startGame('${lvl.id}')` : ''}">
+      ${lvl.name}
+      ${lvl.unlocked ? '' : '<br><small>🔒 通关上一关解锁</small>'}
+    </div>
+  `).join('');
+}
+
+// ===== 游戏开始 =====
+function startGame(levelId) {
+  gameState = 'playing';
+  document.getElementById('menu').style.display = 'none';
+  
+  // 重置状态
+  gold = 100;
+  hp = 20;
+  maxHp = 20;
+  wave = 0;
+  kills = 0;
+  towers = [];
+  enemies = [];
+  bullets = [];
+  particles = [];
+  selectedTowerType = null;
+  selectedTower = null;
+  bossRef = null;
+  
+  const lvl = LEVELS.find(l => l.id === levelId) || { enemyCount: 10, hasBoss: false, hp: 50 };
+  enemiesThisWave = lvl.enemyCount || 10;
+  enemiesKilled = 0;
+  
+  // 生成迷宫
+  generateMaze();
+  renderTowerPanel();
+  updateUI();
+  
+  // 开始第一波
+  setTimeout(() => startWave(), 1500);
+}
+
+function generateMaze() {
+  maze = Array.from({length: Rows}, () => Array(Cols).fill(1));
+  
+  function carve(x, y) {
+    maze[y][x] = 0;
+    [[0,2],[2,0],[0,-2],[-2,0]].sort(() => Math.random() - 0.5).forEach(([dx, dy]) => {
+      let nx = x + dx, ny = y + dy;
+      if (nx > 0 && nx < Cols-1 && ny > 0 && ny < Rows-1 && maze[ny][nx] === 1) {
+        maze[y + dy/2][x + dx/2] = 0;
+        carve(nx, ny);
+      }
+    });
+  }
+  carve(1, 1);
+  maze[0][1] = 0; // 入口
+  maze[Rows-1][Cols-2] = 0; // 出口
+}
+
+function renderTowerPanel() {
+  const panel = document.getElementById('tower-panel');
+  panel.innerHTML = Object.entries(TOWER_CONFIG).map(([id, t]) => `
+    <div class="tower-btn ${selectedTowerType === id ? 'selected' : ''}" onclick="selectTower('${id}')">
+      <span class="emoji">${t.emoji}</span>
+      <span class="cost">${t.cost}</span>
+    </div>
+  `).join('');
+}
+
+function selectTower(type) {
+  selectedTowerType = selectedTowerType === type ? null : type;
+  selectedTower = null;
+  document.getElementById('tower-info').style.display = 'none';
+  renderTowerPanel();
+}
+
+// ===== 塔操作 =====
+function onClick(e) {
+  if (gameState !== 'playing') return;
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / S);
+  const y = Math.floor((e.clientY - rect.top) / S);
+  handleCellClick(x, y);
+}
+
+function onTouchStart(e) {
+  e.preventDefault();
+}
+
+function onTouchEnd(e) {
+  if (gameState !== 'playing') return;
+  const touch = e.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.floor((touch.clientX - rect.left) / S);
+  const y = Math.floor((touch.clientY - rect.top) / S);
+  handleCellClick(x, y);
+}
+
+function handleCellClick(x, y) {
+  if (y < 0 || y >= Rows || x < 0 || x >= Cols) return;
+  
+  // 点击已有塔
+  const existing = towers.find(t => t.x === x && t.y === y);
+  if (existing) {
+    selectedTower = existing;
+    selectedTowerType = null;
+    showTowerInfo(existing);
+    return;
+  }
+  
+  // 放置新塔
+  if (selectedTowerType) {
+    const cfg = TOWER_CONFIG[selectedTowerType];
+    if (gold >= cfg.cost && maze[y][x] === 1) {
+      gold -= cfg.cost;
+      towers.push({
+        x, y, type: selectedTowerType, level: 0,
+        cd: 0, dmgBonus: 0,
+        path: [], pp: 0
+      });
+      maze[y][x] = 2; // 标记为已放塔
+      spawnParticles((x+0.5)*S, (y+0.5)*S, cfg.color, 8);
+      selectedTowerType = null;
+      renderTowerPanel();
+      updateUI();
+    }
+  }
+  
+  document.getElementById('tower-info').style.display = 'none';
+}
+
+function showTowerInfo(tower) {
+  const cfg = TOWER_CONFIG[tower.type];
+  const lvl = cfg.levels[tower.level];
+  const nextLvl = cfg.levels[tower.level + 1];
+  
+  document.getElementById('tower-name').textContent = `${cfg.emoji} ${cfg.name} Lv.${tower.level + 1}`;
+  document.getElementById('tower-stats').innerHTML = `伤害: ${Math.round(lvl.dmg * (1 + tower.dmgBonus))} | 射程: ${lvl.rng}`;
+  
+  const upgBtn = document.getElementById('btn-upgrade');
+  if (nextLvl) {
+    upgBtn.textContent = `升级 (${nextLvl.upgCost}💰)`;
+    upgBtn.disabled = gold < nextLvl.upgCost;
+    upgBtn.style.display = 'block';
+  } else {
+    upgBtn.textContent = '满级';
+    upgBtn.style.display = 'none';
+  }
+  
+  document.getElementById('tower-info').style.display = 'block';
+}
+
+function upgradeTower() {
+  if (!selectedTower) return;
+  const cfg = TOWER_CONFIG[selectedTower.type];
+  const nextLvl = cfg.levels[selectedTower.level + 1];
+  
+  if (nextLvl && gold >= nextLvl.upgCost) {
+    gold -= nextLvl.upgCost;
+    selectedTower.level++;
+    spawnParticles((selectedTower.x+0.5)*S, (selectedTower.y+0.5)*S, '#FFD700', 12);
+    showTowerInfo(selectedTower);
+    updateUI();
+  }
+}
+
+function sellTower() {
+  if (!selectedTower) return;
+  const cfg = TOWER_CONFIG[selectedTower.type];
+  const sellValue = Math.floor(cfg.cost * 0.5 * (1 + selectedTower.level * 0.3));
+  gold += sellValue;
+  maze[selectedTower.y][selectedTower.x] = 1;
+  towers = towers.filter(t => t !== selectedTower);
+  selectedTower = null;
+  document.getElementById('tower-info').style.display = 'none';
+  updateUI();
+}
+
+// ===== 波次 =====
+function startWave() {
+  wave++;
+  enemiesKilled = 0;
+  
+  // 计算本波敌人数量
+  const baseCount = 3 + wave * 2;
+  enemiesThisWave = gameState === 'endless' ? baseCount : (enemiesThisWave || baseCount);
+  
+  // 每10波BOSS
+  if (wave % 10 === 0 && wave > 0) {
+    showWaveAnnounce('👹 BOSS来袭！');
+    const hp = 5000 * (1 + wave * 0.3);
+    spawnEnemy('boss', hp);
+    bossMaxHp = hp;
+    document.getElementById('boss-bar').style.display = 'block';
+  } else {
+    const msg = wave <= 2 ? '第1波' : wave <= 4 ? '第2波' : `第${wave}波`;
+    showWaveAnnounce(msg);
+    
+    // 生成普通敌人
+    const types = ['mushroom'];
+    if (wave >= 3) types.push('pumpkin');
+    if (wave >= 6) types.push('ghost');
+    if (wave >= 10) types.push('statue');
+    
+    const count = Math.min(enemiesThisWave, 20);
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => {
+        if (gameState === 'playing') {
+          const type = types[Math.floor(Math.random() * types.length)];
+          const hp = ENEMY_CONFIG[type].hp * (1 + wave * 0.15);
+          spawnEnemy(type, hp);
+        }
+      }, i * Math.max(300, 800 - wave * 20));
+    }
+  }
+  
+  // 每5波技能选择
+  if (wave % 5 === 0 && wave > 0) {
+    setTimeout(() => showSkillPanel(), 2000);
+  }
+  
+  updateUI();
+}
+
+function showWaveAnnounce(text) {
+  const el = document.getElementById('wave-announce');
+  el.textContent = text;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 1500);
+}
+
+function spawnEnemy(type, hp) {
+  const cfg = ENEMY_CONFIG[type];
+  const enemy = {
+    type, hp, maxHp: hp,
+    x: 1.5 * S, y: 0.5 * S,
+    speed: cfg.speed,
+    size: cfg.size,
+    color: cfg.color,
+    gold: cfg.gold,
+    path: [], pp: 0,
+    slowTimer: 0,
+    shieldActive: cfg.shield || false,
+    dodgeTimer: cfg.dodge ? 300 : 0,
+    hit: 0
+  };
+  
+  // 计算路径
+  enemy.path = findPath(1, 1, Cols-2, Rows-2);
+  enemies.push(enemy);
+}
+
+function findPath(sx, sy, ex, ey) {
+  let q = [[sx, sy, []]], v = new Set([sx+','+sy]);
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+  
+  while (q.length) {
+    let [x, y, path] = q.shift();
+    if (x === ex && y === ey) return path.concat([[x,y]]);
+    
+    dirs.forEach(([dx, dy]) => {
+      let nx = x+dx, ny = y+dy, k = nx+','+ny;
+      if (nx >= 0 && nx < Cols && ny >= 0 && ny < Rows && maze[ny][nx] !== 1 && !v.has(k)) {
+        v.add(k);
+        q.push([nx, ny, path.concat([[x,y]])]);
+      }
+    });
+  }
+  return [[sx,sy],[ex,ey]];
+}
+
+// ===== 技能 =====
+function showSkillPanel() {
+  const panel = document.getElementById('skill-panel');
+  const list = document.getElementById('skill-list');
+  
+  const skills = [...SKILLS].sort(() => Math.random() - 0.5).slice(0, 3);
+  list.innerHTML = skills.map((s, i) => `
+    <button class="skill-btn" onclick="useSkill(${i})">
+      <b>${s.name}</b> - ${s.desc}
+    </button>
+  `).join('');
+  
+  panel.skills = skills;
+  panel.style.display = 'block';
+}
+
+function useSkill(index) {
+  const panel = document.getElementById('skill-panel');
+  if (panel.skills && panel.skills[index]) {
+    panel.skills[index].apply();
+    panel.style.display = 'none';
+    updateUI();
+  }
+}
+
+// ===== 更新循环 =====
+function update() {
+  if (gameState === 'playing') {
+    updateEnemies();
+    updateTowers();
+    updateBullets();
+    updateParticles();
+    
+    // 检查波次完成
+    if (enemies.length === 0 && enemiesKilled >= enemiesThisWave) {
+      setTimeout(() => {
+        if (gameState === 'playing') startWave();
+      }, 1500);
+    }
+  }
+  
+  render();
+  requestAnimationFrame(update);
+}
+
+function updateEnemies() {
+  for (let i = enemies.length - 1; i >= 0; i--) {
+    const e = enemies[i];
+    
+    // 移动
+    let speed = e.speed;
+    if (e.slowTimer > 0) { speed *= 0.5; e.slowTimer--; }
+    e.pp += speed / 60;
+    
+    const idx = Math.min(Math.floor(e.pp), e.path.length - 1);
+    if (e.path[idx]) {
+      e.x = (e.path[idx][0] + 0.5) * S;
+      e.y = (e.path[idx][1] + 0.5) * S;
+    }
+    
+    // 到达终点
+    if (e.pp >= e.path.length - 1) {
+      hp--;
+      shaking = 10;
+      enemies.splice(i, 1);
+      updateUI();
+      
+      if (hp <= 0) gameOver(false);
+      continue;
+    }
+    
+    // BOSS血条
+    if (e.type === 'boss' && bossRef === e) {
+      document.getElementById('boss-fill').style.width = (e.hp / bossMaxHp * 100) + '%';
+    }
+    
+    e.hit = Math.max(0, e.hit - 1);
+  }
+}
+
+function updateTowers() {
+  towers.forEach(t => {
+    if (t.cd > 0) { t.cd--; return; }
+    
+    const cfg = TOWER_CONFIG[t.type];
+    const lvl = cfg.levels[t.level];
+    const tx = (t.x + 0.5) * S;
+    const ty = (t.y + 0.5) * S;
+    const range = lvl.rng * S;
+    
+    // 找目标
+    let target = null, minDist = Infinity;
+    enemies.forEach(e => {
+      const d = Math.hypot(e.x - tx, e.y - ty);
+      if (d < range && d < minDist) { minDist = d; target = e; }
+    });
+    
+    if (target) {
+      t.cd = 60 / lvl.spd;
+      const dmg = lvl.dmg * (1 + t.dmgBonus);
+      
+      // 特殊处理
+      if (lvl.boss && target.type === 'boss') {
+        bullets.push({ x: tx, y: ty, target, dmg: dmg *

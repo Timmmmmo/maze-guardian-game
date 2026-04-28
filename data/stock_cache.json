@@ -1,0 +1,15 @@
+{
+  "last_update": "2026-04-08T11:40:00",
+  "stocks": [
+    {"code": "000001", "name": "平安银行", "price": 10.85, "change": 2.35},
+    {"code": "000002", "name": "万科A", "price": 7.62, "change": -1.25},
+    {"code": "600519", "name": "贵州茅台", "price": 1588.00, "change": 0.85},
+    {"code": "300750", "name": "宁德时代", "price": 198.50, "change": 3.12},
+    {"code": "000858", "name": "五粮液", "price": 142.30, "change": 1.05}
+  ],
+  "indices": [
+    {"name": "上证指数", "value": 3256.78, "change": 1.52},
+    {"name": "深证成指", "value": 10234.56, "change": 3.18},
+    {"name": "创业板指", "value": 2156.32, "change": 4.25}
+  ]
+}

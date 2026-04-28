@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>💎 宝石塔防 - 手机原型</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a2a;color:#fff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;touch-action:none;user-select:none}
+#game{width:100vw;height:100vh;display:flex;flex-direction:column}
+#top{height:44px;background:linear-gradient(180deg,#1a1a4a,#0a0a2a);display:flex;align-items:center;justify-content:space-between;padding:0 10px;font-size:14px;border-bottom:1px solid #3a3a6a}
+#top span{display:flex;align-items:center;gap:4px}
+#top b{color:#FFD700;font-size:16px}
+#canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#bottom{height:140px;background:linear-gradient(0deg,#1a1a4a,#0a0a2a);border-top:1px solid #3a3a6a;padding:8px;display:flex;flex-direction:column;gap:6px}
+#gem-bar{display:flex;gap:6px;justify-content:center}
+.gem-btn{width:52px;height:52px;border-radius:12px;border:2px solid #666;background:linear-gradient(135deg,#1a1a3a,#2a2a4a);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s}
+.gem-btn.selected{border-color:#FFD700;box-shadow:0 0 15px rgba(255,215,0,0.5)}
+.gem-btn .icon{font-size:24px}
+.gem-btn .cost{font-size:10px;color:#FFD700}
+.gem-btn:active{transform:scale(0.95)}
+#actions{display:flex;gap:8px;justify-content:center}
+.action-btn{padding:8px 16px;border-radius:20px;border:none;font-size:12px;font-weight:bold;cursor:pointer}
+#btn-combine{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff}
+#btn-sell{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+#btn-skill{background:linear-gradient(135deg,#3498db,#2980b9);color:#fff}
+#info{position:absolute;bottom:150px;left:50%;transform:translateX(-50%);background:rgba(10,10,40,0.95);border:1px solid #6a6aaa;border-radius:12px;padding:12px;min-width:180px;display:none}
+#info h4{color:#FFD700;margin-bottom:6px;font-size:14px}
+#info p{font-size:11px;color:#aaa;margin:3px 0}
+#combine-modal{position:absolute;inset:0;background:rgba(0,0,0,0.8);display:none;align-items:center;justify-content:center;z-index:50}
+.combine-panel{background:#1a1a4a;border:2px solid #9b59b6;border-radius:16px;padding:20px;text-align:center;min-width:280px}
+.combine-panel h3{color:#9b59b6;margin-bottom:15px}
+.combine-slots{display:flex;align-items:center;justify-content:center;gap:10px;margin:15px 0}
+.combine-slot{width:60px;height:60px;border:2px dashed #666;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer}
+.combine-slot.filled{border-style:solid;border-color:#9b59b6}
+.arrow{font-size:24px;color:#9b59b6}
+#combine-result{width:70px;height:70px;border:2px solid #FFD700;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:32px;margin:10px auto}
+#combine-btn{background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;border:none;padding:10px 30px;border-radius:20px;font-size:14px;cursor:pointer;margin-top:10px}
+#wave-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:bold;color:#FF6B6B;text-shadow:0 0 20px #FF6B6B;display:none;z-index:30}
+#menu{position:absolute;inset:0;background:radial-gradient(ellipse at center,#2a2a5a,#0a0a2a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#menu h1{font-size:28px;color:#FFD700;margin-bottom:10px}
+#menu p{color:#aaa;font-size:12px;margin-bottom:30px}
+.menu-btn{display:block;width:220px;padding:14px;margin:8px 0;background:linear-gradient(135deg,#1a1a3a,#2a2a4a);border:2px solid #6a6aaa;color:#fff;border-radius:12px;font-size:16px;cursor:pointer;text-align:center}
+.menu-btn:active{background:linear-gradient(135deg,#2a2a4a,#3a3a5a)}
+#over{position:absolute;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:80}
+#over h1{font-size:32px;color:#FF6B6B;margin-bottom:20px}
+#over p{color:#aaa;margin:5px}
+#over b{color:#FFD700}
+</style>
+</head>
+<body>
+<div id="menu">
+  <h1>💎 宝石塔防</h1>
+  <p>手机原型 V1.0</p>
+  <button class="menu-btn" onclick="startGame()">▶ 开始游戏</button>
+  <button class="menu-btn" onclick="startGame()">⚔ 无尽模式</button>
+</div>
+
+<div id="game" style="display:none">
+  <div id="top">
+    <span>💰<b id="gold">200</b></span>
+    <span>🌊<b id="wave">1</b></span>
+    <span>❤️<b id="hp">20</b></span>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="wave-msg"></div>
+    <div id="info">
+      <h4 id="info-name">宝石名称</h4>
+      <p id="info-dmg">伤害: 10</p>
+      <p id="info-type">类型: 火焰</p>
+      <p id="info-lv">等级: Lv.1</p>
+    </div>
+  </div>
+  <div id="bottom">
+    <div id="gem-bar"></div>
+    <div id="actions">
+      <button class="action-btn" id="btn-combine" onclick="showCombine()">🔮 合成</button>
+      <button class="action-btn" id="btn-sell" onclick="sellGem()">💰 出售</button>
+      <button class="action-btn" id="btn-skill" onclick="useSkill()">⚡ 技能</button>
+    </div>
+  </div>
+</div>
+
+<div id="combine-modal">
+  <div class="combine-panel">
+    <h3>🔮 宝石合成</h3>
+    <p style="color:#aaa;font-size:12px">选择两个相同等级的宝石合成</p>
+    <div class="combine-slots">
+      <div class="combine-slot" id="slot1" onclick="selectCombineSlot(1)">?</div>
+      <span class="arrow">+</span>
+      <div class="combine-slot" id="slot2" onclick="selectCombineSlot(2)">?</div>
+      <span class="arrow">=</span>
+      <div id="combine-result">?</div>
+    </div>
+    <p id="combine-hint" style="color:#888;font-size:11px">点击槽位选择宝石</p>
+    <button id="combine-btn" onclick="doCombine()">确认合成</button>
+    <button style="background:#444;border:none;color:#fff;padding:8px 20px;border-radius:15px;margin-left:10px;cursor:pointer" onclick="hideCombine()">取消</button>
+  </div>
+</div>
+
+<div id="over">
+  <h1>💀 游戏结束</h1>
+  <p>波次: <b id="ow">0</b></p>
+  <p>击杀: <b id="ok">0</b></p>
+  <button class="menu-btn" onclick="startGame()" style="margin-top:20px">再来一次</button>
+</div>
+
+<script>
+// ===== 游戏配置 =====
+var GEM_TYPES = {
+  fire:   {name:'火焰宝石',icon:'🔴',color:'#FF4500',effect:'燃烧伤害',dmg:20,rng:2.5,spd:60,slow:0},
+  ice:    {name:'冰霜宝石',icon:'🔵',color:'#00BFFF',effect:'减速30%',dmg:10,rng:2.5,spd:50,slow:0.3},
+  poison: {name:'剧毒宝石',icon:'🟢',color:'#32CD32',effect:'持续毒伤',dmg:8,rng:2.5,spd:40,slow:0,dot:5},
+  thunder:{name:'雷霆宝石',icon:'🟡',color:'#FFD700',effect:'连锁2目标',dmg:15,rng:2.5,spd:70,chain:2},
+  shadow: {name:'暗影宝石',icon:'🟣',color:'#9b59b6',effect:'伤害+50%',dmg:30,rng:3,spd:50,bonus:0.5}
+};
+
+var COMBINE_RECIPES = {
+  'fire+ice':    {name:'爆裂宝石',icon:'🟠',color:'#FF6347',effect:'范围伤害+减速',dmg:25,rng:3,aoe:1,slow:0.2},
+  'poison+thunder':{name:'瘟疫宝石',icon:'💚',color:'#7CFC00',effect:'毒伤连锁',dmg:12,chain:3,dot:3},
+  'shadow+fire': {name:'暗焰宝石',icon:'💀',color:'#4B0082',effect:'燃烧+穿透',dmg:40,pierce:1,dot:5},
+  'shadow+ice':  {name:'冰封宝石',icon:'❄️',color:'#00CED1',effect:'冻结敌人',dmg:18,freeze:2},
+  'shadow+poison':{name:'蚀骨宝石',icon:'☠️',color:'#8B0000',effect:'强毒+减速',dmg:15,slow:0.4,dot:10},
+  'shadow+thunder':{name:'雷神宝石',icon:'⚡',color:'#FFD700',effect:'闪电风暴',dmg:35,chain:4}
+};
+
+var ENEMY_TYPES = [
+  {name:'小怪',hp:50,speed:1.2,gold:5,color:'#8FBC8F',size:0.5},
+  {name:'快兵',hp:30,speed:2.0,gold:8,color:'#87CEEB',size:0.4},
+  {name:'重甲',hp:200,speed:0.7,gold:20,color:'#708090',size:0.7,armor:0.3},
+  {name:'飞行',hp:60,speed:1.5,gold:12,color:'#DDA0DD',size:0.5,fly:true},
+  {name:'BOSS',hp:3000,speed:0.4,gold:300,color:'#4B0082',size:1.2,boss:true}
+];
+
+// ===== 游戏状态 =====
+var canvas,ctx,W,H,S,gridW,gridH;
+var maze=[],gems=[],enemies=[],bullets=[],particles=[];
+var gold=200,hp=20,wave=0,kills=0,selectedType=null,playing=false;
+var combineSlot1=null,combineSlot2=null,combineSlotIdx=0;
+
+// ===== 初始化 =====
+function init(){
+  canvas=document.getElementById('c');
+  ctx=canvas.getContext('2d');
+  resize();
+  renderGemBar();
+}
+
+function resize(){
+  var wrap=document.getElementById('canvas-wrap');
+  W=wrap.clientWidth;
+  H=wrap.clientHeight;
+  S=Math.floor(Math.min(W/8,(H-60)/12));
+  gridW=8;
+  gridH=Math.floor(H/S);
+  canvas.width=W;
+  canvas.height=H;
+}
+
+// ===== 迷宫生成 =====
+function genMaze(){
+  maze=[];
+  for(var y=0;y<gridH;y++){
+    maze[y]=[];
+    for(var x=0;x<gridW;x++)maze[y][x]=1;
+  }
+  function carve(x,y){
+    maze[y][x]=0;
+    var dirs=[[0,2],[2,0],[0,-2],[-2,0]].sort(function(){return Math.random()-0.5});
+    for(var i=0;i<dirs.length;i++){
+      var nx=x+dirs[i][0],ny=y+dirs[i][1];
+      if(nx>0&&nx<gridW-1&&ny>0&&ny<gridH-1&&maze[ny][nx]===1){
+        maze[y+dirs[i][1]/2][x+dirs[i][0]/2]=0;
+        carve(nx,ny);
+      }
+    }
+  }
+  carve(1,1);
+  maze[0][1]=0;
+  maze[gridH-1][gridW-2]=0;
+}
+
+function findPath(sx,sy,ex,ey){
+  var q=[[sx,sy,[]]],visited={},dirs=[[0,1],[1,0],[0,-1],[-1,0]];
+  visited[sx+','+sy]=true;
+  while(q.length){
+    var cur=q.shift();
+    var x=cur[0],y=cur[1],path=cur[2];
+    if(x===ex&&y===ey)return path.concat([[x,y]]);
+    for(var i=0;i<dirs.length;i++){
+      var nx=x+dirs[i][0],ny=y+dirs[i][1];
+      var key=nx+','+ny;
+      if(nx>=0&&nx<gridW&&ny>=0&&ny<gridH&&maze[ny][nx]!==1&&!visited[key]){
+        visited[key]=true;
+        q.push([nx,ny,path.concat([[x,y]])]);
+      }
+    }
+  }
+  return[[sx,sy],[ex,ey]];
+}
+
+// ===== 宝石购买栏 =====
+function renderGemBar(){
+  var bar=document.getElementById('gem-bar');
+  bar.innerHTML='';
+  var types=Object.keys(GEM_TYPES);
+  for(var i=0;i<types.length;i++){
+    var t=types[i],g=GEM_TYPES[t];
+    var btn=document.createElement('div');
+    btn.className='gem-btn';
+    btn.innerHTML='<span class="icon">'+g.icon+'</span><span class="cost">'+getGemCost(1)+'</span>';
+    btn.style.borderColor=g.color;
+    (function(type,btn){
+      btn.onclick=function(){
+        if(gold>=getGemCost(1)){
+          selectedType=selectedType===type?null:type;
+          updateGemBarSelection();
+        }
+      };
+    })(t,btn);
+    bar.appendChild(btn);
+  }
+}
+
+function updateGemBarSelection(){
+  var btns=document.querySelectorAll('.gem-btn');
+  var types=Object.keys(GEM_TYPES);
+  for(var i=0;i<btns.length;i++){
+    btns[i].classList.toggle('selected',types[i]===selectedType);
+  }
+}
+
+function getGemCost(lv){
+  return [100,250,500][lv-1]||500;
+}
+
+// ===== 波次系统 =====
+function spawnWave(){
+  wave++;
+  showWaveMsg(wave%10===0?'👹 BOSS来袭!':'第 '+wave+' 波');
+  
+  if(wave%10===0){
+    var cfg=ENEMY_TYPES[4];
+    spawnEnemy(cfg,3000*(1+wave*0.2));
+  }else{
+    var cnt=3+wave*2;
+    var types=[0];
+    if(wave>=2)types.push(1);
+    if(wave>=4)types.push(2);
+    if(wave>=6)types.push(3);
+    for(var i=0;i<Math.min(cnt,20);i++){
+      var ti=types[Math.floor(Math.random()*types.length)];
+      var cfg=ENEMY_TYPES[ti];
+      var hp=cfg.hp*(1+wave*0.12);
+      setTimeout(function(c,h){
+        return function(){if(playing)spawnEnemy(c,h);};
+      }(cfg,hp),i*400);
+    }
+  }
+  updateUI();
+}
+
+function spawnEnemy(cfg,hp){
+  enemies.push({
+    x:1.5*S,y:0.5*S,
+    hp:hp,maxHp:hp,
+    speed:cfg.speed,
+    gold:cfg.gold,
+    color:cfg.color,
+    size:cfg.size,
+    armor:cfg.armor||0,
+    fly:cfg.fly||false,
+    boss:cfg.boss||false,
+    slow:0,dot:0,freeze:0,
+    path:findPath(1,1,gridW-2,gridH-2),
+    pathIdx:0
+  });
+}
+
+function showWaveMsg(txt){
+  var el=document.getElementById('wave-msg');
+  el.textContent=txt;
+  el.style.display='block';
+  setTimeout(function(){el.style.display='none';},1500);
+}
+
+// ===== 游戏循环 =====
+function update(){
+  if(!playing)return;
+  
+  // 检查是否需要新波次
+  if(enemies.length===0)spawnWave();
+  
+  // 更新敌人
+  for(var i=enemies.length-1;i>=0;i--){
+    var e=enemies[i];
+    
+    // 状态效果
+    if(e.freeze>0){e.freeze--;continue;}
+    var spd=e.speed;
+    if(e.slow>0){spd*=0.5;e.slow--;}
+    if(e.dot>0){e.hp-=e.dotVal||2;e.dot--;}
+    
+    // 移动
+    e.pathIdx+=spd/60;
+    var idx=Math.min(Math.floor(e.pathIdx),e.path.length-1);
+    if(e.path[idx]){
+      e.x=(e.path[idx][0]+0.5)*S;
+      e.y=(e.path[idx][1]+0.5)*S;
+    }
+    
+    // 到达终点
+    if(e.pathIdx>=e.path.length-1){
+      hp--;
+      enemies.splice(i,1);
+      updateUI();
+      if(hp<=0){gameOver();return;}
+      continue;
+    }
+    
+    // 死亡
+    if(e.hp<=0){
+      gold+=e.gold;
+      kills++;
+      spawnParticles(e.x,e.y,e.color,12);
+      enemies.splice(i,1);
+      updateUI();
+    }
+  }
+  
+  // 更新宝石攻击
+  for(var i=0;i<gems.length;i++){
+    var g=gems[i];
+    if(g.cd>0){g.cd--;continue;}
+    var gx=(g.x+0.5)*S,gy=(g.y+0.5)*S;
+    var range=g.rng*S;
+    var target=null,minDist=Infinity;
+    
+    for(var j=0;j<enemies.length;j++){
+      var e=enemies[j];
+      var d=Math.sqrt((e.x-gx)*(e.x-gx)+(e.y-gy)*(e.y-gy));
+      if(d<range&&d<minDist){minDist=d;target=e;}
+    }
+    
+    if(target){
+      g.cd=g.spd/60;
+      var dmg=g.dmg;
+      if(g.bonus&&target.boss)dmg*=1+g.bonus;
+      
+      // 发射子弹
+      var angle=Math.atan2(target.y-gy,target.x-gx);
+      bullets.push({
+        x:gx,y:gy,
+        vx:Math.cos(angle)*8,
+        vy:Math.sin(angle)*8,
+        dmg:dmg,
+        color:g.color,
+        gem:g
+      });
+    }
+  }
+  
+  // 更新子弹
+  for(var i=bullets.length-1;i>=0;i--){
+    var b=bullets[i];
+    b.x+=b.vx;
+    b.y+=b.vy;
+    
+    // 超出边界
+    if(b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue;}
+    
+    // 击中敌人
+    for(var j=enemies.length-1;j>=0;j--){
+      var e=enemies[j];
+      if(Math.sqrt((e.x-b.x)*(e.x-b.x)+(e.y-b.y)*(e.y-b.y))<e.size*S*0.5){
+        var dmg=b.dmg*(1-e.armor);
+        e.hp-=dmg;
+        
+        // 应用效果
+        if(b.gem.slow)e.slow=120;
+        if(b.gem.dot){e.dot=180;e.dotVal=b.gem.dot;}
+        if(b.gem.freeze)e.freeze=b.gem.freeze*60;
+        
+        // 连锁
+        if(b.gem.chain){
+          var chainCount=b.gem.chain;
+          for(var k=0;k<enemies.length&&chainCount>0;k++){
+            if(enemies[k]!==e&&Math.sqrt((enemies[k].x-b.x)*(enemies[k].x-b.x)+(enemies[k].y-b.y)*(enemies[k].y-b.y))<S*2){
+              enemies[k].hp-=dmg*0.5;
+              chainCount--;
+            }
+          }
+        }
+        
+        // AOE
+        if(b.gem.aoe){
+          for(var k=0;k<enemies.length;k++){
+            if(enemies[k]!==e&&Math.sqrt((enemies[k].x-b.x)*(enemies[k].x-b.x)+(enemies[k].y-b.y)*(enemies[k].y-b.y))<b.gem.aoe*S){
+              enemies[k].hp-=dmg*0.3;
+              if(b.gem.slow)enemies[k].slow=120;
+            }
+          }
+        }
+        
+        spawnParticles(b.x,b.y,b.color,5);
+        bullets.splice(i,1);
+        break;
+      }
+    }
+  }
+  
+  // 更新粒子
+  for(var i=particles.length-1;i>=0;i--){
+    var p=particles[i];
+    p.x+=p.vx;
+    p.y+=p.vy;
+    p.vy+=0.1;
+    p.life--;
+    if(p.life<=0)particles.splice(i,1);
+  }
+  
+  render();
+  requestAnimationFrame(update);
+}
+
+// ===== 渲染 =====
+function render(){
+  ctx.fillStyle='#0a0a2a';
+  ctx.fillRect(0,0,W,H);
+  
+  // 绘制迷宫
+  for(var y=0;y<gridH;y++){
+    for(var x=0;x<gridW;x++){
+      if(maze[y]&&maze[y][x]===1){
+        ctx.fillStyle='#1a1a4a';
+        ctx.fillRect(x*S+1,y*S+1,S-2,S-2);
+      }else{
+        ctx.fillStyle='#0f0f2f';
+        ctx.fillRect(x*S,y*S,S,S);
+      }
+    }
+  }
+  
+  // 入口出口
+  ctx.fillStyle='rgba(0,255,100,0.2)';
+  ctx.fillRect(1*S,0,S,S);
+  ctx.fillStyle='rgba(255,60,60,0.2)';
+  ctx.fillRect((gridW-2)*S,(gridH-1)*S,S,S);
+  
+  // 绘制宝石
+  for(var i=0;i<gems.length;i++){
+    var g=gems[i];
+    var gx=(g.x+0.5)*S,gy=(g.y+0.5)*S;
+    
+    // 光环
+    ctx.beginPath();
+    ctx.arc(gx,gy,S*0.45,0,Math.PI*2);
+    ctx.fillStyle=g.color+'33';
+    ctx.fill();
+    ctx.strokeStyle=g.color;
+    ctx.lineWidth=2;
+    ctx.stroke();
+    
+    // 图标
+    ctx.font=(S*0.4)+'px sans-serif';
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(g.icon,gx,gy-S*0.08);
+    
+    // 等级
+    ctx.fillStyle='#fff';
+    ctx.font='bold 10px sans-serif';
+    ctx.fillText('Lv'+g.lv,gx,gy+S*0.25);
+  }
+  
+  // 绘制敌人
+  for(var i=0;i<enemies.length;i++){
+    var e=enemies[i];
+    var sz=e.size*S*0.4;
+    
+    // 身体
+    ctx.beginPath();
+    ctx.arc(e.x,e.y,sz,0,Math.PI*2);
+    ctx.fillStyle=e.freeze>0?'#00BFFF':e.color;
+    ctx.fill();
+    
+    // 血条
+    if(!e.boss){
+      ctx.fillStyle='#333';
+      ctx.fillRect(e.x-sz,e.y-sz-6,sz*2,4);
+      var hpRatio=Math.max(0,e.hp/e.maxHp);
+      ctx.fillStyle=hpRatio>0.5?'#4c4':hpRatio>0.25?'#cc4':'#c44';
+      ctx.fillRect(e.x-sz,e.y-sz-6,sz*2*hpRatio,4);
+    }
+    
+    // BOSS大血条
+    if(e.boss){
+      ctx.fillStyle='#333';
+      ctx.fillRect(W*0.1,50,W*0.8,8);
+      ctx.fillStyle='#FF4500';
+      ctx.fillRect(W*0.1,50,W*0.8*Math.max(0,e.hp/e.maxHp),8);
+      ctx.fillStyle='#fff';
+      ctx.font='bold 10px sans-serif';
+      ctx.textAlign='center';
+      ctx.fillText('👹 BOSS',W/2,45);
+    }
+  }
+  
+  // 绘制子弹
+  for(var i=0;i<bullets.length;i++){
+    var b=bullets[i];
+    ctx.beginPath();
+    ctx.arc(b.x,b.y,4,0,Math.PI*2);
+    ctx.fillStyle=b.color;
+    ctx.fill();
+  }
+  
+  // 绘制粒子
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];
+    ctx.globalAlpha=p.life/p.maxLife;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,2,0,Math.PI*2);
+    ctx.fillStyle=p.color;
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function spawnParticles(x,y,color,count){
+  for(var i=0;i<count;i++){
+    var angle=Math.random()*Math.PI*2;
+    var speed=1+Math.random()*3;
+    particles.push({
+      x:x,y:y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed,
+      color:color,
+      life:30,maxLife:30
+    });
+  }
+}
+
+// ===== 交互 =====
+canvas=document.getElementById('c');
+canvas.addEventListener('click',handleClick);
+canvas.addEventListener('touchend',handleTouch);
+
+function handleClick(e){
+  if(!playing)return;
+  var rect=canvas.getBoundingClientRect();
+  var x=Math.floor((e.clientX-rect.left)/S);
+  var y=Math.floor((e.clientY-rect.top)/S);
+  doPlaceOrSelect(x,y);
+}
+
+function handleTouch(e){
+  if(!playing)return;
+  e.preventDefault();
+  var touch=e.changedTouches[0];
+  var rect=canvas.getBoundingClientRect();
+  var x=Math.floor((touch.clientX-rect.left)/S);
+  var y=Math.floor((touch.clientY-rect.top)/S);
+  doPlaceOrSelect(x,y);
+}
+
+function doPlaceOrSelect(x,y){
+  if(x<0||x>=gridW||y<0||y>=gridH)return;
+  
+  // 检查是否点击了现有宝石
+  for(var i=0;i<gems.length;i++){
+    var g=gems[i];
+    if(g.x===x&&g.y===y){
+      selectedType=null;
+      updateGemBarSelection();
+      showGemInfo(g);
+      return;
+    }
+  }
+  
+  // 放置新宝石
+  if(selectedType&&maze[y]&&maze[y][x]===0){
+    var cfg=GEM_TYPES[selectedType];
+    if(gold>=getGemCost(1)){
+      gold-=getGemCost(1);
+      gems.push({
+        x:x,y:y,
+        type:selectedType,
+        lv:1,
+        icon:cfg.icon,
+        name:cfg.name,
+        color:cfg.color,
+        dmg:cfg.dmg,
+        rng:cfg.rng,
+        spd:cfg.spd,
+        slow:cfg.slow||0,
+        dot:cfg.dot||0,
+        chain:cfg.chain||0,
+        aoe:cfg.aoe||0,
+        bonus:cfg.bonus||0,
+        freeze:cfg.freeze||0,
+        cd:0
+      });
+      maze[y][x]=2;
+      spawnParticles((x+0.5)*S,(y+0.5)*S,cfg.color,8);
+      selectedType=null;
+      updateGemBarSelection();
+      updateUI();
+    }
+  }
+  
+  document.getElementById('info').style.display='none';
+}
+
+function showGemInfo(g){
+  document.getElementById('info-name').textContent=g.icon+' '+g.name;
+  document.getElementById('info-dmg').textContent='伤害: '+g.dmg;
+  document.getElementById('info-type').textContent='等级: Lv.'+g.lv;
+  document.getElementById('info').style.display='block';
+}
+
+// ===== 合成系统 =====
+function showCombine(){
+  if(gems.length<2){
+    alert('需要至少2个宝石才能合成!');
+    return;
+  }
+  combineSlot1=null;
+  combineSlot2=null;
+  combineSlotIdx=0;
+  document.getElementById('slot1').textContent='?';
+  document.getElementById('slot1').className='combine-slot';
+  document.getElementById('slot2').textContent='?';
+  document.getElementById('slot2').className='combine-slot';
+  document.getElementById('combine-result').textContent='?';
+  document.getElementById('combine-hint').textContent='点击槽位选择宝石';
+  document.getElementById('combine-modal').style.display='flex';
+}
+
+function hideCombine(){
+  document.getElementById('combine-modal').style.display='none';
+}
+
+function selectCombineSlot(slotIdx){
+  combineSlotIdx=slotIdx;
+  var list='当前宝石:\n';
+  for(var i=0;i<gems.length;i++){
+    list+=i+': '+gems[i].icon+' Lv.'+gems[i].lv+'\n';
+  }
+  var idx=prompt(list+'输入编号选择宝石:');
+  if(idx!==null&&idx>=0&&idx<gems.length){
+    var g=gems[parseInt(idx)];
+    if(slotIdx===1){
+      combineSlot1=g;
+      document.getElementById('slot1').textContent=g.icon+' Lv'+g.lv;
+      document.getElementById('slot1').className='combine-slot filled';
+    }else{
+      combineSlot2=g;
+      document.getElementById('slot2').textContent=g.icon+' Lv'+g.lv;
+      document.getElementById('slot2').className='combine-slot filled';
+    }
+    checkCombineResult();
+  }
+}
+
+function checkCombineResult(){
+  if(!combineSlot1||!combineSlot2)return;
+  
+  // 相同宝石升级
+  if(combineSlot1.type===combineSlot2.type&&combineSlot1.lv===combineSlot2.lv){
+    if(combineSlot1.lv<3){
+      var newLv=combineSlot1.lv+1;
+      var cfg=GEM_TYPES[combineSlot1.type];
+      document.getElementById('combine-result').textContent=cfg.icon+' Lv'+newLv;
+      document.getElementById('combine-hint').textContent='合成升级: '+cfg.name+' Lv.'+newLv;
+    }else{
+      document.getElementById('combine-hint').textContent='已满级，无法继续升级';
+    }
+    return;
+  }
+  
+  // 组合合成
+  var key1=combineSlot1.type+'+'+combineSlot2.type;
+  var key2=combineSlot2.type+'+'+combineSlot1.type;
+  var recipe=COMBINE_RECIPES[key1]||COMBINE_RECIPES[key2];
+  
+  if(recipe){
+    document.getElementById('combine-result').textContent=recipe.icon;
+    document.getElementById('combine-hint').textContent='可合成: '+recipe.name;
+  }else{
+    document.getElementById('combine-hint').textContent='这两个宝石无法组合';
+  }
+}
+
+function doCombine(){
+  if(!combineSlot1||!combineSlot2)return;
+  
+  var idx1=gems.indexOf(combineSlot1);
+  var idx2=gems.indexOf(combineSlot2);
+  if(idx1<0||idx2<0||idx1===idx2)return;
+  
+  // 相同宝石升级
+  if(combineSlot1.type===combineSlot2.type&&combineSlot1.lv===combineSlot2.lv&&combineSlot1.lv<3){
+    combineSlot1.lv++;
+    combineSlot1.dmg=Math.floor(combineSlot1.dmg*1.5);
+    combineSlot1.rng+=0.3;
+    gems.splice(idx2,1);
+    spawnParticles((combineSlot1.x+0.5)*S,(combineSlot1.y+0.5)*S,'#FFD700',15);
+    hideCombine();
+    return;
+  }
+  
+  // 组合合成
+  var key1=combineSlot1.type+'+'+combineSlot2.type;
+  var key2=combineSlot2.type+'+'+combineSlot1.type;
+  var recipe=COMBINE_RECIPES[key1]||COMBINE_RECIPES[key2];
+  
+  if(recipe){
+    // 删除原宝石
+    maze[combineSlot1.y][combineSlot1.x]=0;
+    maze[combineSlot2.y][combineSlot2.x]=0;
+    gems.splice(Math.max(idx1,idx2),1);
+    gems.splice(Math.min(idx1,idx2),1);
+    
+    // 在第一个槽位创建新宝石
+    gems.push({
+      x:combineSlot1.x,y:combineSlot1.y,
+      type:'combined',
+      lv:2,
+      icon:recipe.icon,
+      name:recipe.name,
+      color:recipe.color,
+      dmg:recipe.dmg,
+      rng:recipe.rng||2.5,
+      spd:50,
+      slow:recipe.slow||0,
+      dot:recipe.dot||0,
+      chain:recipe.chain||0,
+      aoe:recipe.aoe||0,
+      freeze:recipe.freeze||0,
+      cd:0
+    });
+    maze[combineSlot1.y][combineSlot1.x]=2;
+    spawnParticles((combineSlot1.x+0.5)*S,(combineSlot1.y+0.5)*S,recipe.color,20);
+    hideCombine();
+  }
+}
+
+function sellGem(){
+  var info=document.getElementById('info');
+  if(info.style.display==='none')return;
+  // 简化：出售最近选择的宝石
+  if(gems.length>0){
+    var g=gems[gems.length-1];
+    var refund=Math.floor(getGemCost(g.lv)*0.6);
+    gold+=refund;
+    maze[g.y][g.x]=0;
+    gems.pop();
+    info.style.display='none';
+    updateUI();
+  }
+}
+
+function useSkill(){
+  // 全屏AOE技能
+  for(var i=0;i<enemies.length;i++){
+    enemies[i].hp-=20;
+    spawnParticles(enemies[i].x,enemies[i].y,'#FFD700',5);
+  }
+}
+
+// ===== 游戏控制 =====
+function startGame(){
+  document.getElementById('menu').style.display='none';
+  document.getElementById('game').style.display='flex';
+  document.getElementById('over').style.display='none';
+  
+  init();
+  resize();
+  genMaze();
+  
+  gold=200;hp=20;wave=0;kills=0;
+  gems=[];enemies=[];bullets=[];particles=[];
+  selectedType=null;
+  playing=true;
+  
+  updateUI();
+  update();
+}
+
+function updateUI(){
+  document.getElementById('gold').textContent=gold;
+  document.getElementById('wave').textContent=wave;
+  document.getElementById('hp').textContent=hp;
+}
+
+function gameOver(){
+  playing=false;
+  document.getElementById('ow').textContent=wave;
+  document.getElementById('ok').textContent=kills;
+  document.getElementById('over').style.display='flex';
+}
+
+// 初始化
+init();
+</script>
+</body>
+</html>

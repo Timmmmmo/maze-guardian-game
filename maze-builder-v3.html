@@ -1,0 +1,142 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,maximum-scale=1">
+<title>迷宫建造塔防</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0a0a1a;font-family:sans-serif;overflow:hidden;touch-action:none}
+#game{width:100vw;height:100vh;display:flex;flex-direction:column}
+#top{height:50px;background:#1a1a3a;display:flex;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid #3a3a6a}
+.stat{color:#aaa}.stat b{color:#FFD700;font-size:18px}
+.mode{padding:4px 12px;border-radius:12px;font-size:12px}
+.mode.build{background:#2a4a4a;color:#4ECDC4}
+.mode.battle{background:#4a2a2a;color:#FF6B6B}
+#canvas-wrap{flex:1;position:relative}
+canvas{display:block;width:100%;height:100%}
+#info{position:absolute;top:55px;right:10px;background:rgba(10,10,30,0.95);border:1px solid #4ECDC4;border-radius:12px;padding:12px;font-size:12px;min-width:130px}
+#info h4{color:#4ECDC4;margin-bottom:8px}
+#info p{color:#aaa;margin:4px 0}#info b{color:#FFD700}
+.good{color:#4c4}.bad{color:#c44}
+#wave-msg{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);font-size:32px;font-weight:bold;text-shadow:0 0 25px currentColor;display:none;z-index:30}
+#mode-bar{height:50px;background:#1a1a3a;border-top:1px solid #3a3a6a;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 10px}
+.mode-btn{padding:10px 18px;border-radius:25px;border:2px solid #666;background:transparent;color:#888;cursor:pointer;font-size:13px}
+.mode-btn.on{border-color:#4ECDC4;color:#4ECDC4;background:rgba(78,205,196,0.1)}
+#bottom{height:120px;background:linear-gradient(0deg,#1a1a3a,#0a0a1a);border-top:1px solid #3a3a6a;padding:8px}
+#items{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.item{width:46px;height:46px;border-radius:10px;border:2px solid #555;background:linear-gradient(135deg,#1a1a2a,#2a2a3a);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.item.on{border-color:#FFD700;box-shadow:0 0 10px rgba(255,215,0,0.3)}
+.item .icon{font-size:18px}.item .cost{font-size:9px;color:#FFD700}
+#actions{display:flex;gap:10px;justify-content:center;margin-top:6px}
+.act{padding:10px 22px;border-radius:25px;border:none;font-size:13px;cursor:pointer;font-weight:bold}
+#btn-go{background:linear-gradient(135deg,#4ECDC4,#2a8a8a);color:#fff}
+#btn-undo{background:linear-gradient(135deg,#e67e22,#d35400);color:#fff}
+#btn-clear{background:linear-gradient(135deg,#666,#444);color:#fff}
+#menu{position:absolute;inset:0;background:radial-gradient(ellipse at center,#2a2a5a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#menu h1{font-size:26px;color:#4ECDC4;margin-bottom:8px}
+#menu h2{font-size:14px;color:#888;margin-bottom:25px;font-weight:normal}
+.menu-btn{width:190px;padding:14px;margin:8px 0;background:linear-gradient(135deg,#1a1a3a,#2a2a4a);border:2px solid #6a6aaa;color:#fff;border-radius:14px;font-size:15px;cursor:pointer}
+.tips{margin-top:20px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;max-width:260px}
+.tips h3{color:#4ECDC4;font-size:12px;margin-bottom:8px}
+.tips p{font-size:11px;color:#999;margin:4px 0;line-height:1.5}
+#over{position:absolute;inset:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:90}
+#over h1{font-size:30px;margin-bottom:20px;color:#FF6B6B}
+#over b{color:#FFD700}
+</style>
+</head>
+<body>
+<div id="menu">
+<h1>迷宫建造塔防</h1>
+<h2>设计迷宫，阻止入侵!</h2>
+<button class="menu-btn" onclick="startGame()">开始游戏</button>
+<div class="tips">
+<h3>玩法说明</h3>
+<p>1. 放置墙壁设计迷宫路径</p>
+<p>2. 怪物从A点走到B点</p>
+<p>3. 路径越长=攻击时间越多</p>
+<p>4. 转弯处是最佳火力点!</p>
+</div>
+</div>
+<div id="game" style="display:none">
+<div id="top">
+<span class="stat">金<b id="gold">300</b></span>
+<span class="stat">波<b id="wave">0</b></span>
+<span class="stat">心<b id="hp">20</b></span>
+<span class="mode build" id="mode-tag">建造中</span>
+</div>
+<div id="canvas-wrap">
+<canvas id="c"></canvas>
+<div id="wave-msg"></div>
+<div id="info">
+<h4>路径分析</h4>
+<p>长度:<b id="len">-</b>格</p>
+<p>转弯:<b id="turns">-</b>处</p>
+<p>效率:<b id="eff" class="">-</b></p>
+</div>
+</div>
+<div id="mode-bar">
+<button class="mode-btn on" id="m-wall" onclick="setMode('wall')">建墙</button>
+<button class="mode-btn" id="m-tower" onclick="setMode('tower')">放塔</button>
+<button class="mode-btn" id="m-del" onclick="setMode('del')">删除</button>
+</div>
+<div id="bottom">
+<div id="items"></div>
+<div id="actions">
+<button class="act" id="btn-go" onclick="toggle()">开战</button>
+<button class="act" id="btn-undo" onclick="undo()">撤销</button>
+<button class="act" id="btn-clear" onclick="clearAll()">清空</button>
+</div>
+</div>
+</div>
+<div id="over">
+<h1>游戏结束</h1>
+<p>波次:<b id="ow">0</b></p>
+<p>击杀:<b id="ok">0</b></p>
+<button class="menu-btn" onclick="startGame()" style="margin-top:20px">再来</button>
+</div>
+<script>
+var W,C,S,cols=10,rows,grid=[],path=[],towers=[],enemies=[],bullets=[],parts=[];
+var gold=300,hp=20,wave=0,kills=0,mode='wall',sel=null,battling=false,hist=[];
+var WALL_C=10,TOWER_C=[80,150,300];
+var TOWERS={
+archer:{n:'弓箭手',i:'🏹',c:'#4ECDC4',d:15,r:3,s:60},
+cannon:{n:'炮塔',i:'💥',c:'#FF6B6B',d:40,r:2.5,s:90,aoe:1.2},
+frost:{n:'冰塔',i:'❄️',c:'#00BFFF',d:10,r:2.5,s:50,slow:0.5},
+light:{n:'闪电',i:'⚡',c:'#FFD700',d:20,r:2.5,s:40,chain:3},
+poison:{n:'毒塔',i:'☠️',c:'#32CD32',d:8,r:2,s:30,dot:5}
+};
+var ENEMIES=[
+{n:'小怪',hp:80,sp:1.0,g:8,c:'#7CB342',z:0.45},
+{n:'快兵',hp:50,sp:1.8,g:10,c:'#42A5F5',z:0.38},
+{n:'重甲',hp:300,sp:0.5,g:30,c:'#78909C',z:0.6,arm:0.4},
+{n:'BOSS',hp:5000,sp:0.3,g:500,c:'#AB47BC',z:1.1,boss:true}
+];
+function init(){C=document.getElementById('c');W=C.getContext('2d');resize();renderItems();C.onclick=click;C.ontouchend=touch}
+function resize(){var w=document.getElementById('canvas-wrap');W=w.clientWidth;H=w.clientHeight;S=Math.floor(Math.min(W/cols,(H-30)/16));rows=Math.floor(H/S);C.width=W;C.height=H}
+function initGrid(){grid=[];for(var y=0;y<rows;y++){grid[y]=[];for(var x=0;x<cols;x++)grid[y][x]=(x===0||x===cols-1||y===0||y===rows-1)?1:0}grid[0][1]=0;grid[rows-1][cols-2]=0;towers=[];enemies=[];bullets=[];parts=[];hist=[];path=findPath();updateInfo()}
+function findPath(){var sx=1,sy=0,ex=cols-2,ey=rows-1,q=[[sx,sy,[]]],v={},d=[[0,1],[1,0],[0,-1],[-1,0]];v[sx+','+sy]=1;while(q.length){var c=q.shift(),x=c[0],y=c[1],p=c[2];if(x===ex&&y===ey)return p.concat([[x,y]]);for(var i=0;i<4;i++){var nx=x+d[i][0],ny=y+d[i][1],k=nx+','+ny;if(nx>=0&&nx<cols&&ny>=0&&ny<rows&&grid[ny][nx]===0&&!v[k]){v[k]=1;q.push([nx,ny,p.concat([[x,y]])])}}}return null}
+function countTurns(p){if(!p||p.length<3)return 0;var t=0;for(var i=1;i<p.length-1;i++){var dx1=p[i][0]-p[i-1][0],dy1=p[i][1]-p[i-1][1],dx2=p[i+1][0]-p[i][0],dy2=p[i+1][1]-p[i][1];if(dx1!==dx2||dy1!==dy2)t++}return t}
+function calcEff(p){if(!p)return{score:0,txt:'阻断!',cls:'bad'};var l=p.length,t=countTurns(p),min=Math.abs(cols-3)+rows-1,ratio=l/min,bonus=1+t*0.15,s=Math.floor(ratio*bonus*100);if(s>=150)return{score:s,txt:'极佳!',cls:'good'};if(s>=120)return{score:s,txt:'良好',cls:'good'};if(s>=100)return{score:s,txt:'一般',cls:''};return{score:s,txt:'较差',cls:'bad'}}
+function updateInfo(){document.getElementById('len').textContent=path?path.length:'断';document.getElementById('turns').textContent=countTurns(path);var e=calcEff(path);document.getElementById('eff').textContent=e.txt;document.getElementById('eff').className=e.cls}
+function renderItems(){var b=document.getElementById('items');b.innerHTML='';var w=document.createElement('div');w.className='item'+(mode==='wall'?' on':'');w.innerHTML='<span class="icon">🧱</span><span class="cost">'+WALL_C+'</span>';w.onclick=function(){setMode('wall')};b.appendChild(w);var ts=Object.keys(TOWERS);for(var i=0;i<ts.length;i++){var t=ts[i],c=TOWERS[t],d=document.createElement('div');d.className='item'+(sel===t?' on':'');d.style.borderColor=c.c;d.innerHTML='<span class="icon">'+c.i+'</span><span class="cost">'+TOWER_C[0]+'</span>';(function(tp){d.onclick=function(){setMode('tower');sel=tp;renderItems()}})(t);b.appendChild(d)}var del=document.createElement('div');del.className='item'+(mode==='del'?' on':'');del.innerHTML='<span class="icon">🗑️</span><span class="cost">退</span>';del.onclick=function(){setMode('del')};b.appendChild(del)}
+function setMode(m){mode=m;document.querySelectorAll('.mode-btn').forEach(function(b){b.classList.remove('on')});document.getElementById('m-'+(m==='del'?'del':m)).classList.add('on');renderItems()}
+function click(e){if(battling)return;var r=C.getBoundingClientRect(),x=Math.floor((e.clientX-r.left)/S),y=Math.floor((e.clientY-r.top)/S);act(x,y)}
+function touch(e){if(battling)return;e.preventDefault();var t=e.changedTouches[0],r=C.getBoundingClientRect(),x=Math.floor((t.clientX-r.left)/S),y=Math.floor((t.clientY-r.top)/S);act(x,y)}
+function act(x,y){if(x<=0||x>=cols-1||y<=0||y>=rows-1)return;if(x===1&&y===0||x===cols-2&&y===rows-1)return;if(mode==='wall'&&grid[y][x]===0&&gold>=WALL_C){hist.push({t:'w',x:x,y:y});grid[y][x]=1;gold-=WALL_C;var np=findPath();if(!np){grid[y][x]=0;gold+=WALL_C;hist.pop();alert('不能阻断路径!');return}path=np;particle((x+0.5)*S,(y+0.5)*S,'#8B4513',8);upd()}else if(mode==='tower'&&sel&&grid[y][x]===0&&gold>=TOWER_C[0]){var c=TOWERS[sel];hist.push({t:'t',x:x,y:y,tp:sel});grid[y][x]=2;gold-=TOWER_C[0];towers.push({x:x,y:y,tp:sel,lv:1,i:c.i,co:c.c,d:c.d,r:c.r,sp:c.s,aoe:c.aoe||0,slow:c.slow||0,chain:c.chain||0,dot:c.dot||0,cd:0});path=findPath();particle((x+0.5)*S,(y+0.5)*S,c.c,12);upd()}else if(mode==='del'){if(grid[y][x]===1){grid[y][x]=0;gold+=Math.floor(WALL_C*0.7)}else if(grid[y][x]===2){for(var i=0;i<towers.length;i++)if(towers[i].x===x&&towers[i].y===y){gold+=Math.floor(TOWER_C[towers[i].lv-1]*0.6);towers.splice(i,1);break}grid[y][x]=0}path=findPath();upd()}updateInfo()}
+function undo(){if(!hist.length)return;var h=hist.pop();if(h.t==='w'){grid[h.y][h.x]=0;gold+=WALL_C}else{for(var i=0;i<towers.length;i++)if(towers[i].x===h.x&&towers[i].y===h.y){towers.splice(i,1);break}grid[h.y][h.x]=0;gold+=TOWER_C[0]}path=findPath();upd();updateInfo()}
+function clearAll(){initGrid();gold=300;upd()}
+function upd(){document.getElementById('gold').textContent=gold;document.getElementById('wave').textContent=wave;document.getElementById('hp').textContent=hp}
+function toggle(){if(!battling){if(!path){alert('请先建造有效迷宫!');return}battling=true;document.getElementById('mode-tag').textContent='战斗中';document.getElementById('mode-tag').className='mode battle';document.getElementById('btn-go').textContent='暂停';if(!enemies.length)spawnWave();loop()}else{battling=false;document.getElementById('mode-tag').textContent='建造中';document.getElementById('mode-tag').className='mode build';document.getElementById('btn-go').textContent='开战'}}
+function spawnWave(){wave++;var m=wave%10===0?'BOSS来袭!':'第'+wave+'波';showMsg(m,wave%10===0?'#FF6B6B':'#4ECDC4');if(wave%10===0){var e=ENEMIES[3];enemies.push(makeE(e,5000*(1+wave*0.12)))}else{var cnt=Math.min(4+wave*2,28),ts=[0];if(wave>=3)ts.push(1);if(wave>=5)ts.push(2);for(var i=0;i<cnt;i++){var ti=ts[Math.floor(Math.random()*ts.length)],e=ENEMIES[ti],hp=e.hp*(1+wave*0.08);setTimeout(function(ec,h){return function(){if(battling&&path)enemies.push(makeE(ec,h))}}(e,hp),i*280)}}upd()}
+function makeE(c,hp){return{x:(path[0][0]+0.5)*S,y:(path[0][1]+0.5)*S,hp:hp,mx:hp,sp:c.sp,g:c.g,co:c.c,z:c.z,arm:c.arm||0,boss:c.boss||0,sl:0,dt:0,dv:0,pi:0}}
+function showMsg(t,c){var el=document.getElementById('wave-msg');el.textContent=t;el.style.color=c;el.style.display='block';setTimeout(function(){el.style.display='none'},1000)}
+function loop(){if(!battling)return;for(var i=enemies.length-1;i>=0;i--){var e=enemies[i];var sp=e.sp;if(e.sl>0){sp*=0.5;e.sl--}if(e.dt>0){e.hp-=e.dv;e.dt--}e.pi+=sp/60;var idx=Math.min(Math.floor(e.pi),path.length-1);if(path[idx]){e.x=(path[idx][0]+0.5)*S;e.y=(path[idx][1]+0.5)*S}if(e.pi>=path.length-1){hp--;enemies.splice(i,1);upd();if(hp<=0){gameOver();return}continue}if(e.hp<=0){gold+=e.g;kills++;particle(e.x,e.y,e.co,15);enemies.splice(i,1);upd()}}if(!enemies.length)setTimeout(function(){if(battling)spawnWave()},700);for(var i=0;i<towers.length;i++){var t=towers[i];if(t.cd>0){t.cd--;continue}var tx=(t.x+0.5)*S,ty=(t.y+0.5)*S,rg=t.r*S,tg=null,md=Infinity;for(var j=0;j<enemies.length;j++){var e=enemies[j];var d=Math.sqrt((e.x-tx)*(e.x-tx)+(e.y-ty)*(e.y-ty));if(d<rg&&d<md){md=d;tg=e}}if(tg){t.cd=t.sp/60;var a=Math.atan2(tg.y-ty,tg.x-tx);bullets.push({x:tx,y:ty,vx:Math.cos(a)*14,vy:Math.sin(a)*14,d:t.d,co:t.co,tw:t})}}for(var i=bullets.length-1;i>=0;i--){var b=bullets[i];b.x+=b.vx;b.y+=b.vy;if(b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue}for(var j=enemies.length-1;j>=0;j--){var e=enemies[j];if(Math.sqrt((e.x-b.x)*(e.x-b.x)+(e.y-b.y)*(e.y-b.y))<e.z*S*0.5+6){var d=b.d*(1-e.arm);e.hp-=d;if(b.tw.sl)e.sl=90;if(b.tw.dt){e.dt=150;e.dv=b.tw.dt}if(b.tw.aoe){for(var k=0;k<enemies.length;k++)if(enemies[k]!==e&&Math.sqrt((enemies[k].x-b.x)*(enemies[k].x-b.x)+(enemies[k].y-b.y)*(enemies[k].y-b.y))<b.tw.aoe*S){enemies[k].hp-=d*0.35;if(b.tw.sl)enemies[k].sl=60}}if(b.tw.chain){var cc=b.tw.chain,cd=[j];for(var k=0;k<enemies.length&&cc>0;k++)if(cd.indexOf(k)<0&&Math.sqrt((enemies[k].x-e.x)*(enemies[k].x-e.x)+(enemies[k].y-e.y)*(enemies[k].y-e.y))<S*2){enemies[k].hp-=d*0.5;cd.push(k);cc--}}particle(b.x,b.y,b.co,6);bullets.splice(i,1);break}}}for(var i=parts.length-1;i>=0;i--){var p=parts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.12;p.l--;if(p.l<=0)parts.splice(i,1)}render();requestAnimationFrame(loop)}
+function render(){W.fillStyle='#0a0a1a';W.fillRect(0,0,C.width,C.height);for(var y=0;y<rows;y++)for(var x=0;x<cols;x++){var v=grid[y]&&grid[y][x];if(v===1){W.fillStyle='#2a2a4a';W.fillRect(x*S+1,y*S+1,S-2,S-2)}else{W.fillStyle='#0f0f2f';W.fillRect(x*S,y*S,S,S)}}W.fillStyle='rgba(0,255,100,0.2)';W.fillRect(1*S,0,S,S);W.fillStyle='#0f0';W.font='bold 12px sans-serif';W.textAlign='center';W.textBaseline='middle';W.fillText('A',1.5*S,0.5*S);W.fillStyle='rgba(255,60,60,0.2)';W.fillRect((cols-2)*S,(rows-1)*S,S,S);W.fillStyle='#f44';W.fillText('B',(cols-1.5)*S,(rows-0.5)*S);if(path&&!battling){W.strokeStyle='rgba(255,215,0,0.3)';W.lineWidth=4;W.setLineDash([10,5]);W.beginPath();W.moveTo((path[0][0]+0.5)*S,(path[0][1]+0.5)*S);for(var i=1;i<path.length;i++)W.lineTo((path[i][0]+0.5)*S,(path[i][1]+0.5)*S);W.stroke();W.setLineDash([]);for(var i=1;i<path.length-1;i++){var dx1=path[i][0]-path[i-1][0],dy1=path[i][1]-path[i-1][1],dx2=path[i+1][0]-path[i][0],dy2=path[i+1][1]-path[i][1];if(dx1!==dx2||dy1!==dy2){W.beginPath();W.arc((path[i][0]+0.5)*S,(path[i][1]+0.5)*S,S*0.25,0,Math.PI*2);W.strokeStyle='rgba(255,100,100,0.5)';W.lineWidth=2;W.stroke()}}}for(var i=0;i<towers.length;i++){var t=towers[i],tx=(t.x+0.5)*S,ty=(t.y+0.5)*S;W.beginPath();W.arc(tx,ty,S*0.38,0,Math.PI*2);W.fillStyle=t.co+'44';W.fill();W.strokeStyle=t.co;W.lineWidth=2;W.stroke();W.font=(S*0.4)+'px sans-serif';W.textAlign='center';W.textBaseline='middle';W.fillText(t.i,tx,ty);W.fillStyle='#fff';W.font='8px sans-serif';W.fillText('Lv'+t.lv,tx,ty+S*0.26)}for(var i=0;i<enemies.length;i++){var e=enemies[i],sz=e.z*S*0.4;W.beginPath();W.arc(e.x,e.y,sz,0,Math.PI*2);W.fillStyle=e.co;W.fill();W.fillStyle='#333';W.fillRect(e.x-sz,e.y-sz-5,sz*2,4);var hr=Math.max(0,e.hp/e.mx);W.fillStyle=hr>0.5?'#4c4':hr>0.25?'#cc4':'#c44';W.fillRect(e.x-sz,e.y-sz-5,sz*2*hr,4)}for(var i=0;i<bullets.length;i++){var b=bullets[i];W.beginPath();W.arc(b.x,b.y,5,0,Math.PI*2);W.fillStyle=b.co;W.fill()}for(var i=0;i<parts.length;i++){var p=parts[i];W.globalAlpha=p.l/p.m;W.beginPath();W.arc(p.x,p.y,3,0,Math.PI*2);W.fillStyle=p.co;W.fill()}W.globalAlpha=1}
+function particle(x,y,c,n){for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*4;parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,co:c,l:30,m:30})}}
+function startGame(){document.getElementById('menu').style.display='none';document.getElementById('game').style.display='flex';document.getElementById('over').style.display='none';init();resize();initGrid();gold=300;hp=20;wave=0;kills=0;battling=false;upd()}
+function gameOver(){battling=false;document.getElementById('ow').textContent=wave;document.getElementById('ok').textContent=kills;document.getElementById('over').style.display='flex'}
+init();
+</script>
+</body>
+</html>

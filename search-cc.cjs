@@ -1,0 +1,15 @@
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = 'C:\\Program Files\\QClaw\\resources\\openclaw\\config\\skills\\online-search\\scripts\\prosearch.cjs';
+const tmp = process.env.TEMP + '\\search-' + Date.now() + '.txt';
+const json = JSON.stringify({ keyword: 'Claude Code Skills GitHub', cnt: 10 });
+fs.writeFileSync(tmp, json);
+const child = spawn('node', [path, json], { stdio: ['pipe', 'pipe', 'pipe'] });
+let out = '', err = '';
+child.stdout.on('data', d => out += d);
+child.stderr.on('data', d => err += d);
+child.on('close', code => {
+  try { fs.unlinkSync(tmp); } catch(e) {}
+  if(out) { try { const r = JSON.parse(out); console.log(JSON.stringify(r, null, 2)); } catch(e) { console.log(out); } }
+  if(err) console.error(err);
+});

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>迷宫守护者 V2.1</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0ff;font-family:'Microsoft YaHei',sans-serif;overflow:hidden;height:100vh;display:flex;align-items:center;justify-content:center}
+canvas{display:block}
+#topbar{position:fixed;top:0;left:0;right:0;padding:8px 15px;display:flex;justify-content:space-between;background:rgba(10,10,30,0.9);z-index:10;font-size:14px;font-weight:bold}
+#topbar span{color:#FFD700}
+#tower-panel{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px;z-index:10;padding:8px;background:rgba(10,10,30,0.9);border-radius:12px}
+.tower-btn{width:50px;height:50px;border-radius:10px;border:2px solid #4ECDC4;background:rgba(10,10,30,0.9);color:#4ECDC4;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tower-btn:hover,.tower-btn.selected{background:rgba(78,205,196,0.3);box-shadow:0 0 15px #4ECDC4}
+.tower-btn .emoji{font-size:20px}
+.tower-btn .cost{font-size:10px;color:#FFD700}
+#tower-info{position:fixed;bottom:75px;left:50%;transform:translateX(-50%);background:rgba(10,10,30,0.95);border:1px solid #4ECDC4;border-radius:12px;padding:12px;display:none;z-index:20;min-width:180px}
+#tower-info h4{color:#FFB347;font-size:14px;margin-bottom:8px}
+#tower-info .stats{font-size:12px;color:#aaa}
+#tower-info .actions{display:flex;gap:8px;margin-top:10px}
+#tower-info button{flex:1;padding:8px;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:bold}
+#btn-upgrade{background:#4ECDC4;color:#fff}
+#btn-sell{background:#FF6B6B;color:#fff}
+#skill-panel{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,10,30,0.98);border:2px solid #FFB347;border-radius:16px;padding:20px;display:none;z-index:50;min-width:280px}
+#skill-panel h3{color:#FFB347;text-align:center;margin-bottom:15px}
+.skill-btn{display:block;width:100%;padding:12px;margin:8px 0;background:#2a2a5e;border:1px solid #4ECDC4;color:#fff;border-radius:8px;cursor:pointer;text-align:left}
+.skill-btn b{color:#4ECDC4}
+#result{position:fixed;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:60}
+#result h1{font-size:32px;margin-bottom:20px}
+#result.fail h1{color:#FF6B6B}
+#result p{color:#aaa;margin:8px}
+#result b{color:#FFD700}
+#result .btn-group{display:flex;gap:15px;margin-top:30px}
+#result button{padding:12px 30px;border:none;border-radius:25px;font-size:14px;cursor:pointer;font-weight:bold}
+#result .btn-retry{background:#4ECDC4;color:#fff}
+#result .btn-menu{background:#666;color:#fff}
+#menu{position:fixed;inset:0;background:radial-gradient(ellipse at center,#1a1a4a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#menu .logo{font-size:28px;color:#4ECDC4;text-shadow:0 0 30px #4ECDC4;margin-bottom:10px;font-weight:bold}
+#menu .version{color:#666;font-size:12px;margin-bottom:40px}
+#menu .level-list{display:flex;flex-direction:column;gap:10px;width:260px}
+.level-btn{padding:14px;background:#2a2a5e;border:1px solid #4ECDC4;color:#fff;border-radius:8px;cursor:pointer;text-align:center;font-size:14px}
+.level-btn:hover{background:#3a3a7e;box-shadow:0 0 15px #4ECDC4}
+.endless-btn{background:#FF6B6B;border-color:#FF6B6B}
+#wave-announce{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:36px;font-weight:bold;color:#FF6B6B;text-shadow:0 0 30px #FF6B6B;display:none;z-index:30;animation:waveIn 1.5s forwards}
+@keyframes waveIn{0%{opacity:0;transform:translate(-50%,-50%) scale(2)}30%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0}}
+#boss-bar{position:fixed;top:45px;left:50%;transform:translateX(-50%);width:180px;display:none;z-index:15}
+#boss-bar .bar{height:8px;background:#333;border-radius:4px}
+#boss-bar .fill{height:100%;background:#FF6B6B;border-radius:4px;transition:width 0.3s}
+#boss-bar .label{text-align:center;font-size:11px;color:#FF6B6B;margin-top:2px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="topbar"><span>💰 <span id="g">100</span></span><span>🌊 <span id="w">1</span></span><span>❤️ <span id="h">20</span></span></div>
+<div id="boss-bar"><div class="bar"><div class="fill" id="bf"></div></div><div class="label">👹 暗影魔王</div></div>
+<div id="wave-announce"></div>
+<div id="tower-panel"></div>
+<div id="tower-info"><h4 id="tn">象牙弓手 Lv.1</h4><div class="stats" id="ts">伤害:15</div><div class="actions"><button id="btn-upgrade">升级</button><button id="btn-sell">出售</button></div></div>
+<div id="skill-panel"><h3>⚡ 选择强化</h3><div id="sl"></div></div>
+<div id="result"><h1 id="rt">游戏结束</h1><p>波次: <b id="rw">0</b></p><p>击杀: <b id="rk">0</b></p><div class="btn-group"><button class="btn-retry" id="br">再来</button><button class="btn-menu" id="bm">菜单</button></div></div>
+<div id="menu"><div class="logo">🏰 迷宫守护者</div><div class="version">V2.1 修复版</div><div class="level-list" id="ll"></div></div>
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d');
+let W,H,S,Rows,maze=[],towers=[],enemies=[],bullets=[],ps=[];
+let gold=100,hp=20,wave=0,kills=0,selected=-1,game='menu',bossRef=null,shaking=0,spawnTimer=0;
+
+const TOWER=[
+  {n:'🐘弓手',d:15,r:3,f:60,c:'#FFB347',v:8,ct:50,u:40},
+  {n:'🐻炮塔',d:25,r:2.5,f:50,c:'#8B4513',v:6,ct:100,u:80,aoe:1},
+  {n:'🐰冰冻',d:8,r:2.5,f:70,c:'#E0FFFF',v:5,ct:80,u:60,slow:0.4},
+  {n:'🦁火焰',d:40,r:2.5,f:30,c:'#FF4500',v:7,ct:200,u:150},
+  {n:'🐒闪电',d:20,r:2.5,f:40,c:'#FFD700',v:9,ct:150,u:120},
+  {n:'🐉龙神',d:50,r:3,f:25,c:'#4B0082',v:6,ct:300,u:250,boss:0.5}
+];
+
+const ENEMY=[
+  {h:50,s:1.2,g:5,c:'#8FBC8F',z:0.6},
+  {h:150,s:1.0,g:15,c:'#FFA500',z:0.75,shield:true},
+  {h:300,s:0.9,g:30,c:'#9370DB',z:0.9,dodge:true},
+  {h:800,s:0.7,g:80,c:'#708090',z:1.2,armor:0.3},
+  {h:5000,s:0.5,g:500,c:'#4B0082',z:1.5,boss:true}
+];
+
+const SKILLS=[
+  {n:'伤害+20%',d:'所有塔伤害+20%',f:()=>towers.forEach(t=>t.db=(t.db||0)+0.2)},
+  {n:'金币+50',d:'立即获得50金币',f:()=>gold+=50},
+  {n:'治疗+5',d:'恢复5点生命',f:()=>hp=Math.min(hp+5,20)},
+  {n:'全屏减速',d:'敌人减速50%',f:()=>enemies.forEach(e=>e.st=(e.st||0)+600)}
+];
+
+function resize(){
+  W=Math.min(window.innerWidth,480);
+  H=Math.min(window.innerHeight,800);
+  S=Math.floor(W/9);
+  Rows=Math.floor(H/S);
+  C.width=W;C.height=H;
+}
+
+function genMaze(){
+  maze=[];
+  for(let y=0;y<Rows;y++){
+    maze[y]=[];
+    for(let x=0;x<9;x++)maze[y][x]=1;
+  }
+  function carve(x,y){
+    maze[y][x]=0;
+    let dirs=[[0,2],[2,0],[0,-2],[-2,0]].sort(()=>Math.random()-0.5);
+    for(let[dx,dy]of dirs){
+      let nx=x+dx,ny=y+dy;
+      if(nx>0&&nx<8&&ny>0&&ny<Rows-1&&maze[ny][nx]===1){
+        maze[y+dy/2][x+dx/2]=0;
+        carve(nx,ny);
+      }
+    }
+  }
+  carve(1,1);
+  maze[0][1]=0;
+  maze[Rows-1][7]=0;
+}
+
+function findPath(sx,sy,ex,ey){
+  let q=[[sx,sy,[]]],v=new Set([sx+','+sy]),d=[[0,1],[1,0],[0,-1],[-1,0]];
+  while(q.length){
+    let[x,y,p]=q.shift();
+    if(x===ex&&y===ey)return p.concat([[x,y]]);
+    for(let[dx,dy]of d){
+      let nx=x+dx,ny=y+dy,k=nx+','+ny;
+      if(nx>=0&&nx<9&&ny>=0&&ny<Rows&&maze[ny][nx]!==1&&!v.has(k)){
+        v.add(k);
+        q.push([nx,ny,p.concat([[x,y]])]);
+      }
+    }
+  }
+  return[[sx,sy],[ex,ey]];
+}
+
+function spawnWave(){
+  wave++;
+  let el=document.getElementById('wave-announce');
+  el.textContent=wave%10===0?'👹 BOSS来袭！':'第'+wave+'波';
+  el.style.display='block';
+  setTimeout(()=>el.style.display='none',1500);
+  
+  if(wave%10===0){
+    let cfg=ENEMY[4];
+    let hp=cfg.h*(1+wave*0.3);
+    let e={...cfg,h:hp,mh:hp,x:1.5*S,y:0.5*S,path:findPath(1,1,7,Rows-2),p:0,hit:0};
+    bossRef=e;
+    enemies.push(e);
+    document.getElementById('boss-bar').style.display='block';
+  }else{
+    let cnt=Math.min(3+wave*2,25);
+    let types=[0];
+    if(wave>=3)types.push(1);
+    if(wave>=6)types.push(2);
+    if(wave>=10)types.push(3);
+    
+    for(let i=0;i<cnt;i++){
+      let ti=types[Math.floor(Math.random()*types.length)];
+      let cfg=ENEMY[ti];
+      let hp=cfg.h*(1+wave*0.15);
+      let e={...cfg,h:hp,mh:hp,x:1.5*S,y:0.5*S,path:findPath(1,1,7,Rows-2),p:0,hit:0};
+      enemies.push(e);
+    }
+  }
+  updateUI();
+}
+
+function updateUI(){
+  document.getElementById('g').textContent=gold;
+  document.getElementById('w').textContent=wave;
+  document.getElementById('h').textContent=hp;
+  let p=document.getElementById('tower-panel');
+  p.innerHTML='';
+  TOWER.forEach((t,i)=>{
+    let b=document.createElement('div');
+    b.className='btn'+(selected===i?' selected':'');
+    b.innerHTML='<span class="emoji">'+t.n[0]+'</span><span class="cost">'+t.ct+'</span>';
+    b.style.opacity=gold>=t.ct?1:0.5;
+    b.onclick=()=>{if(gold>=t.ct){selected=selected===i?-1:i;updateUI();}};
+    p.appendChild(b);
+  });
+}
+
+function addParticles(x,y,col,cnt){
+  for(let i=0;i<cnt;i++){
+    let a=Math.random()*Math.PI*2,s=1+Math.random()*3;
+    ps.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:30,m:30,c:col});
+  }
+}
+
+function addText(x,y,txt,col){
+  ps.push({x,y,txt,c:col,l:60,vy:-1.5});
+}
+
+function update(){
+  if(game!=='playing')return;
+  
+  // 自动生成下一波
+  if(enemies.length===0){
+    spawnTimer++;
+    if(spawnTimer>60){
+      spawnTimer=0;
+      spawnWave();
+    }
+  }else{
+    spawnTimer=0;
+  }
+  
+  // 更新敌人
+  for(let i=enemies.length-1;i>=0;i--){
+    let e=enemies[i];
+    let spd=e.s;
+    if(e.st>0){spd*=0.5;e.st--;}
+    e.p+=spd/60;
+    
+    let idx=Math.min(Math.floor(e.p),e.path.length-1);
+    if(e.path[idx]){
+      e.x=(e.path[idx][0]+0.5)*S;
+      e.y=(e.path[idx][1]+0.5)*S;
+    }
+    
+    if(e.p>=e.path.length-1){
+      hp--;
+      shaking=15;
+      enemies.splice(i,1);
+      updateUI();
+      if(hp<=0)end();
+      continue;
+    }
+    
+    if(e.boss&&bossRef===e){
+      document.getElementById('bf').style.width=Math.max(0,e.h/e.mh*100)+'%';
+    }
+    e.hit=Math.max(0,e.hit-1);
+  }
+  
+  // 更新塔
+  for(let t of towers){
+    if(t.cd>0){t.cd--;continue;}
+    let tx=(t.x+0.5)*S,ty=(t.y+0.5)*S;
+    let range=TOWER[t.t].r*S;
+    let target=null,minD=Infinity;
+    
+    for(let e of enemies){
+      let d=Math.hypot(e.x-tx,e.y-ty);
+      if(d<range&&d<minD){minD=d;target=e;}
+    }
+    
+    if(target){
+      t.cd=TOWER[t.t].f/60;
+      let dmg=TOWER[t.t].d*(1+(t.db||0));
+      if(TOWER[t.t].boss&&target.boss)dmg*=1+TOWER[t.t].boss;
+      let ang=Math.atan2(target.y-ty,target.x-tx);
+      bullets.push({
+        x:tx,y:ty,
+        vx:Math.cos(ang)*TOWER[t.t].v,
+        vy:Math.sin(ang)*TOWER[t.t].v,
+        dmg,col:TOWER[t.t].c,t:t.t
+      });
+    }
+  }
+  
+  // 更新子弹
+  for(let i=bullets.length-1;i>=0;i--){
+    let b=bullets[i];
+    b.x+=b.vx;
+    b.y+=b.vy;
+    
+    if(b.x<0||b.x>W||b.y<0||b.y>H){
+      bullets.splice(i,1);
+      continue;
+    }
+    
+    for(let j=enemies.length-1;j>=0;j--){
+      let e=enemies[j];
+      if(Math.hypot(e.x-b.x,e.y-b.y)<e.z*S*0.5){
+        let dmg=b.dmg;
+        if(e.armor)dmg*=1-e.armor;
+        if(e.shield&&!e.shieldUsed){dmg*=0.5;e.shieldUsed=true;}
+        e.h-=dmg;
+        e.hit=6;
+        
+        if(TOWER[b.t].aoe){
+          for(let k=enemies.length-1;k>=0;k--){
+            let o

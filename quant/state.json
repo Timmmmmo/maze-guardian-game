@@ -1,0 +1,247 @@
+{
+  "holdings": {
+    "600036": {
+      "name": "招商银行",
+      "shares": 500,
+      "avg_cost": 39.08,
+      "buy_date": "2026-04-07",
+      "signal": "RSI_OVERSOLD"
+    },
+    "000858": {
+      "name": "五 粮 液",
+      "shares": 100,
+      "avg_cost": 102.83,
+      "buy_date": "2026-04-07",
+      "signal": "MA_GOLDEN"
+    },
+    "000762": {
+      "name": "西藏矿业",
+      "shares": 300,
+      "avg_cost": 30.48,
+      "buy_date": "2026-04-07",
+      "signal": "MA_GOLDEN"
+    },
+    "600900": {
+      "name": "长江电力",
+      "shares": 400,
+      "avg_cost": 26.48,
+      "buy_date": "2026-04-07",
+      "signal": "RSI_OVERSOLD"
+    }
+  },
+  "trades": [
+    {
+      "time": "2026-04-07 13:29",
+      "act": "BUY",
+      "code": "600036",
+      "name": "招商银行",
+      "price": 39.08,
+      "shares": 500,
+      "amount": 19540.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=28.2<30 oversold, RSI14=33.4<50"
+    },
+    {
+      "time": "2026-04-07 13:29",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.43,
+      "shares": 600,
+      "amount": 15858.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 13:30",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.43,
+      "shares": 600,
+      "amount": 15858.0,
+      "profit": 0.0,
+      "profit_pct": 0.0,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 13:30",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.43,
+      "shares": 600,
+      "amount": 15858.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 13:31",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.42,
+      "shares": 600,
+      "amount": 15852.000000000002,
+      "profit": -5.999999999998181,
+      "profit_pct": -0.037835792659844755,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 13:31",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.42,
+      "shares": 600,
+      "amount": 15852.000000000002,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 14:01",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.42,
+      "shares": 600,
+      "amount": 15852.000000000002,
+      "profit": 0.0,
+      "profit_pct": 0.0,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 14:01",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.42,
+      "shares": 600,
+      "amount": 15852.000000000002,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 14:20",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.44,
+      "shares": 600,
+      "amount": 15864.0,
+      "profit": 11.999999999998181,
+      "profit_pct": 0.07570022710066981,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 14:20",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.44,
+      "shares": 600,
+      "amount": 15864.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 14:24",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.46,
+      "shares": 600,
+      "amount": 15876.0,
+      "profit": 12.0,
+      "profit_pct": 0.07564296520423601,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 14:24",
+      "act": "BUY",
+      "code": "000858",
+      "name": "五 粮 液",
+      "price": 102.83,
+      "shares": 100,
+      "amount": 10283.0,
+      "sig": "MA_GOLDEN",
+      "reason": "MA5(103.92) crosses above MA10(102.76), price(102.83) > MA20(102.83)"
+    },
+    {
+      "time": "2026-04-07 14:24",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.46,
+      "shares": 500,
+      "amount": 13230.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 14:24",
+      "act": "BUY",
+      "code": "000762",
+      "name": "西藏矿业",
+      "price": 30.48,
+      "shares": 300,
+      "amount": 9144.0,
+      "sig": "MA_GOLDEN",
+      "reason": "MA5(29.98) crosses above MA10(28.90), price(30.48) > MA20(28.65)"
+    },
+    {
+      "time": "2026-04-07 14:36",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.45,
+      "shares": 500,
+      "amount": 13225.0,
+      "profit": -5.0,
+      "profit_pct": -0.03779289493575208,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 14:36",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.45,
+      "shares": 400,
+      "amount": 10580.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    },
+    {
+      "time": "2026-04-07 14:54",
+      "act": "SELL",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.48,
+      "shares": 400,
+      "amount": 10592.0,
+      "profit": 12.0,
+      "profit_pct": 0.11342155009451795,
+      "sig": "MA_DEAD",
+      "reason": "MA5(26.95) crosses below MA10(27.04)"
+    },
+    {
+      "time": "2026-04-07 14:54",
+      "act": "BUY",
+      "code": "600900",
+      "name": "长江电力",
+      "price": 26.48,
+      "shares": 400,
+      "amount": 10592.0,
+      "sig": "RSI_OVERSOLD",
+      "reason": "RSI5=9.3<30 oversold, RSI14=24.2<50"
+    }
+  ],
+  "cash": 50466.0
+}

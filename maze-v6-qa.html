@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,maximum-scale=1">
+<title>迷宫塔防 V6 - 腾讯精品品质</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+:root{--gold:#FFD700;--green:#4CAF50;--red:#F44336;--blue:#2196F3;--purple:#9C27B0;--bg:#0a0a1a;--panel:#1a1a3a}
+body{background:var(--bg);font-family:-apple-system,'Segoe UI',sans-serif;overflow:hidden;touch-action:none}
+
+/* 主容器 */
+#game{width:100vw;height:100vh;display:flex;flex-direction:column}
+
+/* 顶部状态 */
+#top{height:48px;background:var(--panel);display:flex;align-items:center;justify-content:space-around;border-bottom:1px solid #3a3a6a}
+.stat{display:flex;align-items:center;gap:4px;font-size:14px;color:#aaa}
+.stat b{color:var(--gold);font-size:20px;font-weight:bold;text-shadow:0 0 8px rgba(255,215,0,0.5)}
+
+/* 游戏画布 */
+#canvas-box{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+
+/* 入口出口标记 */
+#entry-mark{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#00C853,#00E676);color:#fff;padding:6px 18px;border-radius:20px;font-size:13px;font-weight:bold;box-shadow:0 2px 12px rgba(0,200,83,0.5);z-index:10}
+#exit-mark{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#FF5252,#FF1744);color:#fff;padding:6px 18px;border-radius:20px;font-size:13px;font-weight:bold;box-shadow:0 2px 12px rgba(255,82,82,0.5);z-index:10}
+
+/* 波次提示 */
+#wave-alert{position:absolute;top:45%;left:50%;transform:translate(-50%,-50%);font-size:40px;font-weight:bold;color:var(--green);text-shadow:0 0 30px var(--green);display:none;z-index:20;animation:pop 0.5s ease-out}
+@keyframes pop{0%{transform:translate(-50%,-50%) scale(1.5);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+
+/* 路径信息 */
+#path-panel{position:absolute;top:56px;right:10px;background:rgba(0,0,0,0.85);border:1px solid #4ECDC4;border-radius:12px;padding:12px;font-size:12px;color:#aaa;z-index:10}
+#path-panel h4{color:#4ECDC4;margin-bottom:6px;font-size:13px}
+#path-panel p{margin:4px 0}
+#path-panel b{color:var(--gold)}
+.excellent{color:var(--green)!important}
+.poor{color:var(--red)!important}
+
+/* 底部操作区 */
+#bottom{height:150px;background:var(--panel);border-top:1px solid #3a3a6a;padding:10px;display:flex;flex-direction:column;gap:8px}
+
+/* 工具选择 */
+#toolbar{display:flex;gap:10px;justify-content:center;align-items:center}
+.tool{width:60px;height:60px;border-radius:14px;border:2px solid #555;background:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s}
+.tool.active{border-color:var(--gold);background:#2a2a2a;box-shadow:0 0 16px rgba(255,215,0,0.4)}
+.tool-icon{font-size:24px}
+.tool-name{font-size:11px;color:#888;margin-top:2px}
+.tool-cost{font-size:12px;color:var(--gold);font-weight:bold}
+
+/* 塔选择 */
+#tower-select{display:none;gap:8px;justify-content:center;flex-wrap:wrap}
+.tower-item{width:48px;height:48px;border-radius:10px;border:2px solid #555;background:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.tower-item.active{border-color:var(--gold);box-shadow:0 0 12px rgba(255,215,0,0.4)}
+.tower-icon{font-size:18px}
+.tower-price{font-size:10px;color:var(--gold)}
+
+/* 操作按钮 */
+#action-btns{display:flex;gap:12px;justify-content:center}
+.action-btn{padding:12px 28px;border-radius:24px;border:none;font-size:14px;font-weight:bold;cursor:pointer;transition:transform 0.1s}
+.action-btn:active{transform:scale(0.96)}
+#btn-battle{background:linear-gradient(135deg,var(--green),#388E3C);color:#fff;box-shadow:0 4px 12px rgba(76,175,80,0.4)}
+#btn-undo{background:linear-gradient(135deg,#FF9800,#F57C00);color:#fff;box-shadow:0 4px 12px rgba(255,152,0,0.4)}
+#btn-clear{background:linear-gradient(135deg,#78909C,#546E7A);color:#fff;box-shadow:0 4px 12px rgba(120,144,156,0.4)}
+
+/* 提示框 */
+#tooltip{position:absolute;background:rgba(0,0,0,0.9);color:#fff;padding:8px 12px;border-radius:8px;font-size:12px;pointer-events:none;display:none;z-index:50}
+
+/* 主菜单 */
+#main-menu{position:absolute;inset:0;background:linear-gradient(135deg,#1a1a3a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#main-menu h1{color:#4ECDC4;font-size:32px;margin-bottom:8px;text-shadow:0 0 20px rgba(78,205,196,0.5)}
+#main-menu h2{color:#888;font-size:16px;margin-bottom:30px;font-weight:normal}
+.menu-btn{width:200px;padding:16px;margin:10px 0;background:linear-gradient(135deg,#2a2a4a,#3a3a5a);border:2px solid #6a6aaa;color:#fff;border-radius:16px;font-size:18px;cursor:pointer;transition:all 0.2s}
+.menu-btn:hover{border-color:#8a8acc;transform:scale(1.02)}
+.intro{margin-top:30px;padding:16px;background:rgba(0,0,0,0.4);border-radius:14px;max-width:280px}
+.intro h3{color:#4ECDC4;font-size:14px;margin-bottom:12px}
+.intro p{color:#999;font-size:13px;margin:6px 0;line-height:1.6}
+
+/* 结束画面 */
+#game-over{position:absolute;inset:0;background:rgba(0,0,0,0.92);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:90}
+#game-over h1{font-size:36px;margin-bottom:24px;color:var(--red)}
+#game-over p{color:#aaa;margin:8px}
+#game-over b{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<div id="main-menu">
+  <h1>🏰 迷宫塔防</h1>
+  <h2>建造迷宫 · 阻止入侵</h2>
+  <button class="menu-btn" onclick="startGame()">▶ 开始游戏</button>
+  <div class="intro">
+    <h3>🎯 玩法说明</h3>
+    <p>🟢 怪物从顶部入口进入</p>
+    <p>🔴 到达底部出口扣血</p>
+    <p>🧱 用墙壁设计迷宫让怪物绕路</p>
+    <p>🗼 在关键位置放置防御塔</p>
+    <p>💡 路径越长、转弯越多 = 效率越高！</p>
+  </div>
+</div>
+
+<div id="game" style="display:none">
+  <div id="top">
+    <span class="stat">💰<b id="show-gold">300</b></span>
+    <span class="stat">🌊<b id="show-wave">0</b></span>
+    <span class="stat">❤️<b id="show-hp">20</b></span>
+  </div>
+  
+  <div id="canvas-box">
+    <canvas id="game-canvas"></canvas>
+    <div id="entry-mark">🟢 入口 · 怪物从这里进入</div>
+    <div id="exit-mark">🔴 出口 · 到达这里扣血</div>
+    <div id="wave-alert"></div>
+    <div id="path-panel">
+      <h4>📊 路径分析</h4>
+      <p>长度: <b id="show-length">-</b> 格</p>
+      <p>转弯: <b id="show-turns">-</b> 处</p>
+      <p>效率: <b id="show-efficiency">-</b></p>
+    </div>
+    <div id="tooltip"></div>
+  </div>
+  
+  <div id="bottom">
+    <div id="toolbar">
+      <div class="tool active" id="tool-wall" onclick="selectTool('wall')">
+        <span class="tool-icon">🧱</span>
+        <span class="tool-name">墙壁</span>
+        <span class="tool-cost">10金</span>
+      </div>
+      <div class="tool" id="tool-tower" onclick="selectTool('tower')">
+        <span class="tool-icon">🗼</span>
+        <span class="tool-name">防御塔</span>
+        <span class="tool-cost">选塔</span>
+      </div>
+      <div class="tool" id="tool-delete" onclick="selectTool('delete')">
+        <span class="tool-icon">🗑️</span>
+        <span class="tool-name">删除</span>
+        <span class="tool-cost">退70%</span>
+      </div>
+    </div>
+    
+    <div id="tower-select">
+      <div class="tower-item" data-type="archer" onclick="selectTower('archer')">
+        <span class="tower-icon">🏹</span>
+        <span class="tower-price">80</span>
+      </div>
+      <div class="tower-item" data-type="cannon" onclick="selectTower('cannon')">
+        <span class="tower-icon">💥</span>
+        <span class="tower-price">120</span>
+      </div>
+      <div class="tower-item" data-type="ice" onclick="selectTower('ice')">
+        <span class="tower-icon">❄️</span>
+        <span class="tower-price">100</span>
+      </div>
+      <div class="tower-item" data-type="thunder" onclick="selectTower('thunder')">
+        <span class="tower-icon">⚡</span>
+        <span class="tower-price">150</span>
+      </div>
+      <div class="tower-item" data-type="poison" onclick="selectTower('poison')">
+        <span class="tower-icon">☠️</span>
+        <span class="tower-price">90</span>
+      </div>
+    </div>
+    
+    <div id="action-btns">
+      <button class="action-btn" id="btn-battle" onclick="toggleBattle()">⚔️ 开战</button>
+      <button class="action-btn" id="btn-undo" onclick="undoAction()">↩️ 撤销</button>
+      <button class="action-btn" id="btn-clear" onclick="clearMaze()">🗑️ 清空</button>
+    </div>
+  </div>
+</div>
+
+<div id="game-over">
+  <h1>💀 游戏结束</h1>
+  <p>坚持波次: <b id="final-wave">0</b></p>
+  <p>击杀怪物: <b id="final-kills">0</b></p>
+  <button class="menu-btn" onclick="startGame()" style="margin-top:24px">🔄 再来一局</button>
+</div>
+
+<script>
+// ============================================================
+// 配置区 - 所有游戏参数集中定义
+// ============================================================
+const CONFIG = {
+  grid: { cols: 8, rows: 12, cellSize: 38 },
+  entry: { x: 1, y: 0 },
+  exit: { x: 6, y: 11 },
+  costs: { wall: 10 },
+  towerCosts: { archer:80, cannon:120, ice:100, thunder:150, poison:90 }
+};
+
+const TOWER_TYPES = {
+  archer:  { icon:'🏹', color:'#4CAF50', damage:15, range:3, speed:60 },
+  cannon:  { icon:'💥', color:'#F44336', damage:40, range:2.5, speed:90, aoe:1.2 },
+  ice:     { icon:'❄️', color:'#03A9F4', damage:10, range:2.5, speed:50, slow:0.5 },
+  thunder: { icon:'⚡', color:'#FFC107', damage:20, range:2.5, speed:40, chain:3 },
+  poison:  { icon:'☠️', color:'#8BC34A', damage:8, range:2, speed:30, dot:5 }
+};
+
+const ENEMY_TYPES = [
+  { name:'小怪', hp:80, speed:1.0, gold:8, color:'#8BC34A', size:0.45 },
+  { name:'快兵', hp:50, speed:1.8, gold:10, color:'#42A5F5', size:0.38 },
+  { name:'重甲', hp:300, speed:0.5, gold:30, color:'#78909C', size:0.55, armor:0.4 },
+  { name:'BOSS', hp:5000, speed:0.3, gold:500, color:'#AB47BC', size:1.0, boss:true }
+];
+
+// ============================================================
+// 游戏状态 - 集中管理
+// ============================================================
+let state = {
+  gold: 300,
+  hp: 20,
+  wave: 0,
+  kills: 0,
+  currentTool: 'wall',
+  selectedTower: null,
+  isBattling: false,
+  grid: [],
+  path: [],
+  towers: [],
+  enemies: [],
+  bullets: [],
+  particles: [],
+  history: []
+};
+
+// 画布相关
+let canvas = null;
+let ctx = null;
+let canvasWidth = 0;
+let canvasHeight = 0;
+let gridOffsetX = 0;
+let gridOffsetY = 0;
+
+// ============================================================
+// 初始化
+// ============================================================
+function initCanvas() {
+  canvas = document.getElementById('game-canvas');
+  ctx = canvas.getContext('2d');
+  resizeCanvas();
+  canvas.addEventListener('click', handleCanvasClick);
+  canvas.addEventListener('touchend', handleCanvasTouch);
+}
+
+function resizeCanvas() {
+  const container = document.getElementById('canvas-box');
+  canvasWidth = container.clientWidth;
+  canvasHeight = container.clientHeight;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  
+  // 计算网格偏移使其居中
+  const gridWidth = CONFIG.grid.cols * CONFIG.grid.cellSize;
+  const gridHeight = CONFIG.grid.rows * CONFIG.grid.cellSize;
+  gridOffsetX = Math.floor((canvasWidth - gridWidth) / 2);
+  gridOffsetY = Math.floor((canvasHeight - gridHeight) / 2);
+}
+
+function initGameState() {
+  state.grid = [];
+  for (let y = 0; y < CONFIG.grid.rows; y++) {
+    state.grid[y] = [];
+    for (let x = 0; x < CONFIG.grid.cols; x++) {
+      // 边界是墙
+      const isBorder = x === 0 || x === CONFIG.grid.cols - 1 || y === 0 || y === CONFIG.grid.rows - 1;
+      state.grid[y][x] = isBorder ? 1 : 0;
+    }
+  }
+  // 开放入口出口
+  state.grid[CONFIG.entry.y][CONFIG.entry.x] = 0;
+  state.grid[CONFIG.exit.y][CONFIG.exit.x] = 0;
+  
+  // 重置其他状态
+  state.towers = [];
+  state.enemies = [];
+  state.bullets = [];
+  state.particles = [];
+  state.history = [];
+  state.path = findPath();
+  updatePathInfo();
+}
+
+// ============================================================
+// A*寻路算法
+// ============================================================
+function findPath() {
+  const start = CONFIG.entry;
+  const end = CONFIG.exit;
+  
+  const queue = [[start.x, start.y, []]];
+  const visited = {};
+  visited[`${start.x},${start.y}`] = true;
+  
+  const directions = [[0,1], [1,0], [0,-1], [-1,0]];
+  
+  while (queue.length > 0) {
+    const [cx, cy, path] = queue.shift();
+    
+    if (cx === end.x && cy === end.y) {
+      return path.concat([[cx, cy]]);
+    }
+    
+    for (const [dx, dy] of directions) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      const key = `${nx},${ny}`;
+      
+      if (nx >= 0 && nx < CONFIG.grid.cols && 
+          ny >= 0 && ny < CONFIG.grid.rows &&
+          state.grid[ny][nx] === 0 && !visited[key]) {
+        visited[key] = true;
+        queue.push([nx, ny, path.concat([[cx, cy]])]);
+      }
+    }
+  }
+  
+  return null; // 路径被阻断
+}
+
+function countTurns(path) {
+  if (!path || path.length < 3) return 0;
+  let turns = 0;
+  for (let i = 1; i < path.length - 1; i++) {
+    const dx1 = path[i][0] - path[i-1][0];
+    const dy1 = path[i][1] - path[i-1][1];
+    const dx2 = path[i+1][0] - path[i][0];
+    const dy2 = path[i+1][1] - path[i][1];
+    if (dx1 !== dx2 || dy1 !== dy2) turns++;
+  }
+  return turns;
+}
+
+function updatePathInfo() {
+  document.getElementById('show-length').textContent = state.path ? state.path.length : '断';
+  document.getElementById('show-turns').textContent = countTurns(state.path);
+  
+  if (!state.path) {
+    document.getElementById('show-efficiency').textContent = '阻断!';
+    document.getElementById('show-efficiency').className = 'poor';
+  } else {
+    const minLen = Math.abs(CONFIG.exit.x - CONFIG.entry.x) + Math.abs(CONFIG.exit.y - CONFIG.entry.y);
+    const ratio = state.path.length / minLen;
+    const bonus = 1 + countTurns(state.path) * 0.15;
+    const score = Math.floor(ratio * bonus * 100);
+    
+    const effEl = document.getElementById('show-efficiency');
+    if (score >= 150) {
+      effEl.textContent = `极佳 ${score}%`;
+      effEl.className = 'excellent';
+    } else if (score >= 100) {
+      effEl.textContent = `良好 ${score}%`;
+      effEl.className = 'excellent';
+    } else {
+      effEl.textContent = `较差 ${score}%`;
+      effEl.className = 'poor';
+    }
+  }
+}
+
+// ============================================================
+// 工具选择 - 修复变量名冲突
+// ============================================================
+function selectTool(toolName) {
+  state.currentTool = toolName;
+  
+  // 更新UI
+  document.querySelectorAll('.tool').forEach(el => el.classList.remove('active'));
+  document.getElementById('tool-' + toolName).classList.add('active');
+  
+  // 显示/隐藏塔选择
+  const towerPanel = document.getElementById('tower-select');
+  towerPanel.style.display = (toolName === 'tower' ? 'flex' : 'none');
+  
+  if (toolName !== 'tower') {
+    state.selectedTower = null;
+    document.querySelectorAll('.tower-item').forEach(el => el.classList.remove('active'));
+  }
+}
+
+function selectTower(towerType) {
+  state.selectedTower = towerType;
+  document.querySelectorAll('.tower-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.type === towerType);
+  });
+}
+
+// ============================================================
+// 画布交互
+// ============================================================
+function handleCanvasClick(event) {
+  if (state.isBattling) return;
+  
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = event.clientX - rect.left;
+  const mouseY = event.clientY - rect.top;
+  
+  processAction(mouseX, mouseY);
+}
+
+function handleCanvasTouch(event) {
+  if (state.isBattling) return;
+  event.preventDefault();
+  
+  const touch = event.changedTouches[0];
+  const rect = canvas.getBoundingClientRect();
+  const mouseX = touch.clientX - rect.left;
+  const mouseY = touch.clientY - rect.top;
+  
+  processAction(mouseX, mouseY);
+}
+
+function processAction(mouseX, mouseY) {
+  // 转换为网格坐标
+  const gridX = Math.floor((mouseX - gridOffsetX) / CONFIG.grid.cellSize);
+  const gridY = Math.floor((mouseY - gridOffsetY) / CONFIG.grid.cellSize);
+  
+  // 边界检查
+  if (gridX <= 0 || gridX >= CONFIG.grid.cols - 1) return;
+  if (gridY <= 0 || gridY >= CONFIG.grid.rows - 1) return;
+  
+  // 不能操作入口出口
+  if ((gridX === CONFIG.entry.x && gridY === CONFIG.entry.y) ||
+      (gridX === CONFIG.exit.x && gridY === CONFIG.exit.y)) return;
+  
+  if (state.currentTool === 'wall') {
+    placeWall(gridX, gridY);
+  } else if (state.currentTool === 'tower') {
+    placeTower(gridX, gridY);
+  } else if (state.currentTool === 'delete') {
+    deleteObject(gridX, gridY);
+  }
+}
+
+function placeWall(x, y) {
+  if (state.grid[y][x] !== 0) return;
+  if (state.gold < CONFIG.costs.wall) return;
+  
+  // 记录历史
+  state.history.push({ action: 'wall', x: x, y: y });
+  
+  // 放置墙壁
+  state.grid[y][x] = 1;
+  state.gold -= CONFIG.costs.wall;
+  
+  // 检查路径
+  const newPath = findPath();
+  if (!newPath) {
+    // 回滚
+    state.grid[y][x] = 0;
+    state.gold += CONFIG.costs.wall;
+    state.history.pop();
+    showTooltip('⚠️ 不能阻断怪物路径！', x, y);
+    state.path = findPath();
+  } else {
+    state.path = newPath;
+    createParticles(x, y, '#8B4513', 10);
+  }
+  
+  updateUI();
+  updatePathInfo();
+  render();
+}
+
+function placeTower(x, y) {
+  if (!state.selectedTower) {
+    showTooltip('请先选择塔类型', x, y);
+    return;
+  }
+  if (state.grid[y][x] !== 0) return;
+  
+  const cost = CONFIG.towerCosts[state.selectedTower];
+  if (state.gold < cost) {
+    showTooltip('金币不足', x, y);
+    return;
+  }
+  
+  const towerData = TOWER_TYPES[state.selectedTower];
+  
+  // 记录历史
+  state.history.push({ action: 'tower', x: x, y: y, type: state.selectedTower });
+  
+  // 放置塔
+  state.grid[y][x] = 2;
+  state.gold -= cost;
+  
+  state.towers.push({
+    x: x,
+    y: y,
+    type: state.selectedTower,
+    level: 1,
+    icon: towerData.icon,
+    color: towerData.color,
+    damage: towerData.damage,
+    range: towerData.range,
+    speed: towerData.speed,
+    aoe: towerData.aoe || 0,
+    slow: towerData.slow || 0,
+    chain: towerData.chain || 0,
+    dot: towerData.dot || 0,
+    cooldown: 0
+  });
+  
+  state.path = findPath();
+  createParticles(x, y, towerData.color, 15);
+  updateUI();
+  updatePathInfo();
+  render();
+}
+
+function deleteObject(x, y) {
+  if (state.grid[y][x] === 1) {
+    state.grid[y][x] = 0;
+    state.gold += Math.floor(CONFIG.costs.wall * 0.7);
+  } else if (state.grid[y][x] === 2) {
+    for (let i = 0; i < state.towers.length; i++) {
+      if (state.towers[i].x === x && state.towers[i].y === y) {
+        state.gold += Math.floor(CONFIG.towerCosts[state.towers[i].type] * 0.6);
+        state.towers.splice(i, 1);
+        break;
+      }
+    }
+    state.grid[y][x] = 0;
+  }
+  
+  state.path = findPath();
+  updateUI();
+  updatePathInfo();
+  render();
+}
+
+function undoAction() {
+  if (state.history.length === 0) return;
+  
+  const last = state.history.pop();
+  
+  if (last.action === 'wall') {
+    state.grid[last.y][last.x] = 0;
+    state.gold += CONFIG.costs.wall;
+  } else if (last.action === 'tower') {
+    for (let i = 0; i < state.towers.length; i++) {
+      if (state.towers[i].x === last.x && state.towers[i].y === last.y) {
+        state.gold += CONFIG.towerCosts[state.towers[i].type];
+        state.towers.splice(i, 1);
+        break;
+      }
+    }
+    state.grid[last.y][last.x] = 0;
+  }
+  
+  state.path = findPath();
+  updateUI();
+  updatePathInfo();
+  render();
+}
+
+function clearMaze() {
+  initGameState();
+  state.gold = 300;
+  updateUI();
+  render();
+}
+
+function showTooltip(text, gridX, gridY) {
+  const tooltip = document.getElementById('tooltip');
+  tooltip.textContent = text;
+  tooltip.style.left = (gridOffsetX + gridX * CONFIG.grid.cellSize + 20) + 'px';
+  tooltip.style.top = (gridOffsetY + gridY * CONFIG.grid.cellSize) + 'px';
+  tooltip.style.display = 'block';
+  setTimeout(() => tooltip.style.display = 'none', 1500);
+}
+
+// ============================================================
+// 战斗系统
+// ============================================================
+function toggleBattle() {
+  if (!state.isBattling) {
+    if (!state.path) {
+      alert('请先建造有效的迷宫！');
+      return;
+    }
+    state.isBattling = true;
+    document.getElementById('btn-battle').textContent = '⏸ 暂停';
+    document.getElementById('entry-mark').style.display = 'none';
+    document.getElementById('exit-mark').style.display = 'none';
+    
+    if (state.enemies.length === 0) spawnWave();
+    gameLoop();
+  } else {
+    state.isBattling = false;
+    document.getElementById('btn-battle').textContent = '⚔️ 开战';
+  }
+}
+
+function spawnWave() {
+  state.wave++;
+  const isBoss = state.wave % 10 === 0;
+  showAlert(isBoss ? '👹 BOSS来袭！' : `🌊 第${state.wave}波`, isBoss ? '#F44336' : '#4CAF50');
+  
+  if (isBoss) {
+    const boss = ENEMY_TYPES[3];
+    state.enemies.push(createEnemy(boss, 2000 + state.wave * 200));
+  } else {
+    const count = Math.min(5 + state.wave * 2, 30);
+    for (let i = 0; i < count; i++) {
+      let hp = 50 + state.wave * 5;
+      let color = '#8BC34A';
+      let size = 0.4;
+      let gold = 8;
+      
+      if (Math.random() < 0.2 && state.wave >= 3) {
+        hp = 100;
+        color = '#42A5F5';
+        size = 0.35;
+        gold = 10;
+      }
+      if (Math.random() < 0.1 && state.wave >= 5) {
+        hp = 250;
+        color = '#78909C';
+        size = 0.5;
+        gold = 25;
+      }
+      
+      setTimeout(() => {
+        if (state.isBattling && state.path) {
+          state.enemies.push(createEnemy({hp, speed:1, gold, color, size}, hp));
+        }
+      }, i * 280);
+    }
+  }
+  updateUI();
+}
+
+function createEnemy(type, hp) {
+  return {
+    x: gridOffsetX + (state.path[0][0] + 0.5) * CONFIG.grid.cellSize,
+    y: gridOffsetY + (state.path[0][1] + 0.5) * CONFIG.grid.cellSize,
+    hp: hp,
+    maxHp: hp,
+    speed: type.speed || 1,
+    gold: type.gold || 8,
+    color: type.color || '#8BC34A',
+    size: type.size || 0.4,
+    armor: type.armor || 0,
+    slowTimer: 0,
+    dotTimer: 0,
+    dotValue: 0,
+    pathIndex: 0
+  };
+}
+
+function showAlert(text, color) {
+  const el = document.getElementById('wave-alert');
+  el.textContent = text;
+  el.style.color = color;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 1000);
+}
+
+// ============================================================
+// 游戏循环
+// ============================================================
+function gameLoop() {
+  if (!state.isBattling) return;
+  
+  updateEnemies();
+  updateTowers();
+  updateBullets();
+  updateParticles();
+  
+  if (state.enemies.length === 0) {
+    setTimeout(() => { if (state.isBattling) spawnWave(); }, 800);
+  }
+  
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+function updateEnemies() {
+  for (let i = state.enemies.length - 1; i >= 0; i--) {
+    const enemy = state.enemies[i];
+    
+    // 处理减速和毒伤
+    let speed = enemy.speed;
+    if (enemy.slowTimer > 0) { speed *= 0.5; enemy.slowTimer--; }
+    if (enemy.dotTimer > 0) { enemy.hp -= enemy.dotValue; enemy.dotTimer--; }
+    
+    // 移动
+    enemy.pathIndex += speed / 60;
+    const idx = Math.min(Math.floor(enemy.pathIndex), state.path.length - 1);
+    
+    enemy.x = gridOffsetX + (state.path[idx][0] + 0.5) * CONFIG.grid.cellSize;
+    enemy.y = gridOffsetY + (state.path[idx][1] + 0.5) * CONFIG.grid.cellSize;
+    
+    // 到达终点
+    if (enemy.pathIndex >= state.path.length - 1) {
+      state.hp--;
+      state.enemies.splice(i, 1);
+      updateUI();
+      if (state.hp <= 0) endGame();
+      continue;
+    }
+    
+    // 死亡
+    if (enemy.hp <= 0) {
+      state.gold += enemy.gold;
+      state.kills++;
+      createParticles(enemy.x, enemy.y, enemy.color, 18);
+      state.enemies.splice(i, 1);
+      updateUI();
+    }
+  }
+}
+
+function updateTowers() {
+  for (const tower of state.towers) {
+    if (tower.cooldown > 0) { tower.cooldown--; continue; }
+    
+    const tx = gridOffsetX + (tower.x + 0.5) * CONFIG.grid.cellSize;
+    const ty = gridOffsetY + (tower.y + 0.5) * CONFIG.grid.cellSize;
+    const range = tower.range * CONFIG.grid.cellSize;
+    
+    // 找最近敌人
+    let target = null;
+    let minDist = Infinity;
+    
+    for (const enemy of state.enemies) {
+      const dist = Math.hypot(enemy.x - tx, enemy.y - ty);
+      if (dist < range && dist < minDist) {
+        minDist = dist;
+        target = enemy;
+      }
+    }
+    
+    if (target) {
+      tower.cooldown = tower.speed / 60;
+      const angle = Math.atan2(target.y - ty, target.x - tx);
+      
+      state.bullets.push({
+        x: tx,
+        y: ty,
+        vx: Math.cos(angle) * 12,
+        vy: Math.sin(angle) * 12,
+        damage: tower.damage,
+        color: tower.color,
+        source: tower
+      });
+    }
+  }
+}
+
+function updateBullets() {
+  for (let i = state.bullets.length - 1; i >= 0; i--) {
+    const bullet = state.bullets[i];
+    bullet.x += bullet.vx;
+    bullet.y += bullet.vy;
+    
+    // 出界
+    if (bullet.x < 0 || bullet.x > canvasWidth || bullet.y < 0 || bullet.y > canvasHeight) {
+      state.bullets.splice(i, 1);
+      continue;
+    }
+    
+    // 碰撞检测
+    for (let j = state.enemies.length - 1; j >= 0; j--) {
+      const enemy = state.enemies[j];
+      const hitDist = enemy.size * CONFIG.grid.cellSize * 0.5 + 6;
+      
+      if (Math.hypot(enemy.x - bullet.x, enemy.y - bullet.y) < hitDist) {
+        const dmg = bullet.damage * (1 - enemy.armor);
+        enemy.hp -= dmg;
+        
+        // 特殊效果
+        if (bullet.source.slow) enemy.slowTimer = 90;
+        if (bullet.source.dot) { enemy.dotTimer = 150; enemy.dotValue = bullet.source.dot; }
+        
+        // AOE伤害
+        if (bullet.source.aoe) {
+          for (const e of state.enemies) {
+            if (e !== enemy) {
+              const aoeDist = Math.hypot(e.x - bullet.x, e.y - bullet.y);
+              if (aoeDist < bullet.source.aoe * CONFIG.grid.cellSize) {
+                e.hp -= dmg * 0.35;
+                if (bullet.source.slow) e

@@ -1,0 +1,129 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,maximum-scale=1">
+<title>宝石塔防 - 迷宫建造版</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:#0a0a2a;color:#fff;font-family:sans-serif;overflow:hidden;touch-action:none}
+#game{width:100vw;height:100vh;display:flex;flex-direction:column}
+#top{height:48px;background:linear-gradient(180deg,#1a1a4a,#0a0a2a);display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:14px;border-bottom:1px solid #3a3a6a}
+#top span{display:flex;align-items:center;gap:4px}
+#top b{color:#FFD700;font-size:18px}
+.build-mode{color:#4ECDC4;font-size:12px}
+#canvas-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#mode-bar{height:50px;background:#1a1a4a;border-top:1px solid #3a3a6a;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 10px}
+.mode-btn{padding:8px 16px;border-radius:20px;border:2px solid #666;background:transparent;color:#aaa;font-size:13px;cursor:pointer}
+.mode-btn.active{border-color:#4ECDC4;color:#4ECDC4;background:rgba(78,205,196,0.15)}
+#bottom{height:130px;background:linear-gradient(0deg,#1a1a4a,#0a0a2a);border-top:1px solid #3a3a6a;padding:8px}
+#item-bar{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.item-btn{width:46px;height:46px;border-radius:10px;border:2px solid #666;background:linear-gradient(135deg,#1a1a3a,#2a2a4a);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.item-btn.selected{border-color:#FFD700;box-shadow:0 0 12px rgba(255,215,0,0.4)}
+.item-btn .icon{font-size:18px}
+.item-btn .cost{font-size:9px;color:#FFD700}
+#actions{display:flex;gap:8px;justify-content:center;margin-top:6px}
+.action-btn{padding:8px 20px;border-radius:20px;border:none;font-size:12px;font-weight:bold;cursor:pointer}
+#btn-start{background:linear-gradient(135deg,#4ECDC4,#44a08d);color:#fff}
+#btn-reset{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+#path-info{position:absolute;top:55px;right:10px;background:rgba(10,10,40,0.9);border:1px solid #4ECDC4;border-radius:10px;padding:8px;font-size:11px}
+#wave-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:28px;font-weight:bold;color:#FF6B6B;text-shadow:0 0 20px #FF6B6B;display:none;z-index:30}
+#menu{position:absolute;inset:0;background:radial-gradient(ellipse at center,#2a2a5a,#0a0a2a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#menu h1{font-size:26px;color:#FFD700;margin-bottom:8px}
+#menu h2{font-size:14px;color:#aaa;margin-bottom:30px;font-weight:normal}
+.menu-btn{display:block;width:200px;padding:14px;margin:8px 0;background:linear-gradient(135deg,#1a1a3a,#2a2a4a);border:2px solid #6a6aaa;color:#fff;border-radius:12px;font-size:16px;cursor:pointer}
+.tips{margin-top:25px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;max-width:260px}
+.tips h3{color:#4ECDC4;font-size:12px;margin-bottom:8px}
+.tips p{font-size:11px;color:#888;margin:4px 0;line-height:1.5}
+#over{position:absolute;inset:0;background:rgba(0,0,0,0.9);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:80}
+#over h1{font-size:30px;margin-bottom:20px;color:#FF6B6B}
+#over b{color:#FFD700}
+</style>
+</head>
+<body>
+<div id="menu">
+<h1>宝石塔防</h1>
+<h2>迷宫建造版 V2.0</h2>
+<button class="menu-btn" onclick="startGame()">开始游戏</button>
+<div class="tips">
+<h3>核心玩法</h3>
+<p>1. 建造墙壁设计迷宫路线</p>
+<p>2. 转弯处是火力集中点</p>
+<p>3. 放置宝石防御入侵</p>
+<p>4. 不同迷宫=不同策略!</p>
+</div>
+</div>
+<div id="game" style="display:none">
+<div id="top">
+<span><b id="gold">300</b>金</span>
+<span>波<b id="wave">0</b></span>
+<span>心<b id="hp">20</b></span>
+<span class="build-mode" id="mode-text">建造中</span>
+</div>
+<div id="canvas-wrap">
+<canvas id="c"></canvas>
+<div id="path-info"><p>路径:<b id="path-len">-</b>格</p><p>转弯:<b id="turns">-</b>处</p></div>
+<div id="wave-msg"></div>
+</div>
+<div id="mode-bar">
+<button class="mode-btn active" id="mode-wall" onclick="setMode('wall')">建墙</button>
+<button class="mode-btn" id="mode-gem" onclick="setMode('gem')">宝石</button>
+<button class="mode-btn" id="mode-del" onclick="setMode('delete')">删除</button>
+</div>
+<div id="bottom">
+<div id="item-bar"></div>
+<div id="actions">
+<button class="action-btn" id="btn-start" onclick="toggleBattle()">开战</button>
+<button class="action-btn" id="btn-reset" onclick="resetMaze()">重置</button>
+</div>
+</div>
+</div>
+<div id="over">
+<h1>游戏结束</h1>
+<p>波次:<b id="ow">0</b></p>
+<p>击杀:<b id="ok">0</b></p>
+<button class="menu-btn" onclick="startGame()" style="margin-top:20px">再来</button>
+</div>
+<script>
+var WALL_COST=10,GEM_COST=[80,180,350];
+var GEM_TYPES={
+fire:{name:"火焰",icon:"🔴",color:"#FF4500",dmg:25,rng:2.5,spd:55,effect:"燃烧"},
+ice:{name:"冰霜",icon:"🔵",color:"#00BFFF",dmg:12,rng:2.5,spd:45,effect:"减速"},
+poison:{name:"剧毒",icon:"🟢",color:"#32CD32",dmg:10,rng:2.5,spd:35,effect:"毒伤"},
+thunder:{name:"雷霆",icon:"🟡",color:"#FFD700",dmg:18,rng:2.5,spd:65,effect:"连锁"},
+shadow:{name:"暗影",icon:"🟣",color:"#9b59b6",dmg:35,rng:3,spd:50,effect:"增伤"}
+};
+var ENEMY_TYPES=[
+{name:"小怪",hp:60,speed:1.2,gold:5,color:"#8FBC8F",size:0.5},
+{name:"快兵",hp:40,speed:2,gold:8,color:"#87CEEB",size:0.4},
+{name:"重甲",hp:250,speed:0.6,gold:25,color:"#708090",size:0.7,armor:0.4},
+{name:"BOSS",hp:4000,speed:0.35,gold:400,color:"#4B0082",size:1.3,boss:true}
+];
+var canvas,ctx,W,H,S,gridW=8,gridH,grid=[],path=[],gems=[],enemies=[],bullets=[],particles=[];
+var gold=300,hp=20,wave=0,kills=0,mode="wall",selGem=null,playing=false,battling=false;
+function init(){canvas=document.getElementById("c");ctx=canvas.getContext("2d");resize();renderItemBar();canvas.addEventListener("click",onClick);canvas.addEventListener("touchend",onTouch)}
+function resize(){var wrap=document.getElementById("canvas-wrap");W=wrap.clientWidth;H=wrap.clientHeight;S=Math.floor(Math.min(W/8,(H-20)/14));gridH=Math.floor(H/S);canvas.width=W;canvas.height=H}
+function initGrid(){grid=[];for(var y=0;y<gridH;y++){grid[y]=[];for(var x=0;x<gridW;x++){grid[y][x]=(x===0||x===gridW-1||y===0||y===gridH-1)?1:0}}grid[0][1]=0;grid[gridH-1][gridW-2]=0;gems=[];path=findPath();updatePathInfo()}
+function findPath(){var sx=1,sy=0,ex=gridW-2,ey=gridH-1,q=[[sx,sy,[]]],v={},d=[[0,1],[1,0],[0,-1],[-1,0]];v[sx+","+sy]=true;while(q.length){var cur=q.shift(),x=cur[0],y=cur[1],p=cur[2];if(x===ex&&y===ey)return p.concat([[x,y]]);for(var i=0;i<4;i++){var nx=x+d[i][0],ny=y+d[i][1],k=nx+","+ny;if(nx>=0&&nx<gridW&&ny>=0&&ny<gridH&&grid[ny][nx]===0&&!v[k]){v[k]=true;q.push([nx,ny,p.concat([[x,y]])])}}}return null}
+function countTurns(p){if(!p||p.length<3)return 0;var t=0;for(var i=1;i<p.length-1;i++){var dx1=p[i][0]-p[i-1][0],dy1=p[i][1]-p[i-1][1],dx2=p[i+1][0]-p[i][0],dy2=p[i+1][1]-p[i][1];if(dx1!==dx2||dy1!==dy2)t++}return t}
+function updatePathInfo(){if(path){document.getElementById("path-len").textContent=path.length;document.getElementById("turns").textContent=countTurns(path)}else{document.getElementById("path-len").textContent="断";document.getElementById("turns").textContent="-"}}
+function renderItemBar(){var bar=document.getElementById("item-bar");bar.innerHTML="";var wb=document.createElement("div");wb.className="item-btn"+(mode==="wall"?" selected":"");wb.innerHTML="<span class=\"icon\">🧱</span><span class=\"cost\">"+WALL_COST+"</span>";wb.onclick=function(){setMode("wall")};bar.appendChild(wb);var ts=Object.keys(GEM_TYPES);for(var i=0;i<ts.length;i++){var t=ts[i],g=GEM_TYPES[t],btn=document.createElement("div");btn.className="item-btn"+(selGem===t?" selected":"");btn.innerHTML="<span class=\"icon\">"+g.icon+"</span><span class=\"cost\">"+GEM_COST[0]+"</span>";btn.style.borderColor=g.color;(function(type){btn.onclick=function(){setMode("gem");selGem=type;renderItemBar()}})(t);bar.appendChild(btn)}var db=document.createElement("div");db.className="item-btn"+(mode==="delete"?" selected":"");db.innerHTML="<span class=\"icon\">🗑</span><span class=\"cost\">退</span>";db.onclick=function(){setMode("delete")};bar.appendChild(db)}
+function setMode(m){mode=m;document.querySelectorAll(".mode-btn").forEach(function(b){b.classList.remove("active")});document.getElementById("mode-"+(m==="delete"?"del":m)).classList.add("active");renderItemBar()}
+function onClick(e){if(battling)return;var r=canvas.getBoundingClientRect(),x=Math.floor((e.clientX-r.left)/S),y=Math.floor((e.clientY-r.top)/S);doAction(x,y)}
+function onTouch(e){if(battling)return;e.preventDefault();var t=e.changedTouches[0],r=canvas.getBoundingClientRect(),x=Math.floor((t.clientX-r.left)/S),y=Math.floor((t.clientY-r.top)/S);doAction(x,y)}
+function doAction(x,y){if(x<=0||x>=gridW-1||y<=0||y>=gridH-1)return;if(x===1&&y===0||x===gridW-2&&y===gridH-1)return;if(mode==="wall"){if(grid[y][x]===0&&gold>=WALL_COST){grid[y][x]=1;gold-=WALL_COST;var np=findPath();if(!np){grid[y][x]=0;gold+=WALL_COST;alert("路径被阻断!");path=findPath()}else{path=np}updateUI();updatePathInfo()}}else if(mode==="gem"){if(selGem&&grid[y][x]===0&&gold>=GEM_COST[0]){var c=GEM_TYPES[selGem];gold-=GEM_COST[0];grid[y][x]=2;gems.push({x:x,y:y,type:selGem,lv:1,icon:c.icon,name:c.name,color:c.color,dmg:c.dmg,rng:c.rng,spd:c.spd,effect:c.effect,cd:0});path=findPath();spawnParticle((x+0.5)*S,(y+0.5)*S,c.color,10);updateUI();updatePathInfo()}}else if(mode==="delete"){if(grid[y][x]===1){grid[y][x]=0;gold+=Math.floor(WALL_COST*0.7)}else if(grid[y][x]===2){for(var i=0;i<gems.length;i++){if(gems[i].x===x&&gems[i].y===y){gold+=Math.floor(GEM_COST[gems[i].lv-1]*0.6);gems.splice(i,1);break}}grid[y][x]=0}path=findPath();updateUI();updatePathInfo()}}
+function toggleBattle(){if(!battling){if(!path){alert("请先建造有效迷宫!");return}battling=true;document.getElementById("mode-text").textContent="战斗中";document.getElementById("btn-start").textContent="暂停";if(enemies.length===0)spawnWave();update()}else{battling=false;document.getElementById("mode-text").textContent="建造中";document.getElementById("btn-start").textContent="开战"}}
+function spawnWave(){wave++;var el=document.getElementById("wave-msg");el.textContent=wave%10===0?"BOSS来袭!":"第"+wave+"波";el.style.display="block";setTimeout(function(){el.style.display="none"},1500);if(wave%10===0){var c=ENEMY_TYPES[3];spawnEnemy(c,4000*(1+wave*0.15))}else{var cnt=Math.min(3+wave*2,25),ts=[0];if(wave>=2)ts.push(1);if(wave>=4)ts.push(2);for(var i=0;i<cnt;i++){var ti=ts[Math.floor(Math.random()*ts.length)],c=ENEMY_TYPES[ti],hp=c.hp*(1+wave*0.1);setTimeout(function(cfg,h){return function(){if(battling)spawnEnemy(cfg,h)}}(c,hp),i*350)}}updateUI()}
+function spawnEnemy(cfg,hp){if(!path||path.length===0)return;enemies.push({x:(path[0][0]+0.5)*S,y:(path[0][1]+0.5)*S,hp:hp,maxHp:hp,speed:cfg.speed,gold:cfg.gold,color:cfg.color,size:cfg.size,armor:cfg.armor||0,boss:cfg.boss||false,slow:0,dot:0,freeze:0,pathIdx:0})}
+function update(){if(!battling)return;for(var i=enemies.length-1;i>=0;i--){var e=enemies[i];if(e.freeze>0){e.freeze--;continue}var spd=e.speed;if(e.slow>0){spd*=0.5;e.slow--}if(e.dot>0){e.hp-=3;e.dot--}e.pathIdx+=spd/60;var idx=Math.min(Math.floor(e.pathIdx),path.length-1);if(path[idx]){e.x=(path[idx][0]+0.5)*S;e.y=(path[idx][1]+0.5)*S}if(e.pathIdx>=path.length-1){hp--;enemies.splice(i,1);updateUI();if(hp<=0){gameOver();return}continue}if(e.hp<=0){gold+=e.gold;kills++;spawnParticle(e.x,e.y,e.color,12);enemies.splice(i,1);updateUI()}}if(enemies.length===0)setTimeout(function(){if(battling)spawnWave()},1000);for(var i=0;i<gems.length;i++){var g=gems[i];if(g.cd>0){g.cd--;continue}var gx=(g.x+0.5)*S,gy=(g.y+0.5)*S,rg=g.rng*S,tg=null,md=Infinity;for(var j=0;j<enemies.length;j++){var e=enemies[j];var d=Math.sqrt((e.x-gx)*(e.x-gx)+(e.y-gy)*(e.y-gy));if(d<rg&&d<md){md=d;tg=e}}if(tg){g.cd=g.spd/60;var a=Math.atan2(tg.y-gy,tg.x-gx);bullets.push({x:gx,y:gy,vx:Math.cos(a)*10,vy:Math.sin(a)*10,dmg:g.dmg,color:g.color,gem:g})}}for(var i=bullets.length-1;i>=0;i--){var b=bullets[i];b.x+=b.vx;b.y+=b.vy;if(b.x<0||b.x>W||b.y<0||b.y>H){bullets.splice(i,1);continue}for(var j=enemies.length-1;j>=0;j--){var e=enemies[j];if(Math.sqrt((e.x-b.x)*(e.x-b.x)+(e.y-b.y)*(e.y-b.y))<e.size*S*0.5+5){var dmg=b.dmg*(1-e.armor);e.hp-=dmg;if(b.gem.type==="ice")e.slow=90;if(b.gem.type==="fire")e.dot=120;spawnParticle(b.x,b.y,b.color,5);bullets.splice(i,1);break}}}for(var i=particles.length-1;i>=0;i--){var p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life--;if(p.life<=0)particles.splice(i,1)}render();requestAnimationFrame(update)}
+function render(){ctx.fillStyle="#0a0a2a";ctx.fillRect(0,0,W,H);for(var y=0;y<gridH;y++){for(var x=0;x<gridW;x++){var v=grid[y]&&grid[y][x];if(v===1){ctx.fillStyle="#2a2a5a";ctx.fillRect(x*S+1,y*S+1,S-2,S-2)}else if(v===0){ctx.fillStyle="#0f0f2f";ctx.fillRect(x*S,y*S,S,S)}}}ctx.fillStyle="rgba(0,255,100,0.25)";ctx.fillRect(1*S,0,S,S);ctx.fillStyle="#0f0";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("入",1.5*S,0.5*S);ctx.fillStyle="rgba(255,60,60,0.25)";ctx.fillRect((gridW-2)*S,(gridH-1)*S,S,S);ctx.fillStyle="#f44";ctx.fillText("出",(gridW-1.5)*S,(gridH-0.5)*S);if(path&&path.length>0&&!battling){ctx.strokeStyle="rgba(255,215,0,0.35)";ctx.lineWidth=3;ctx.setLineDash([8,4]);ctx.beginPath();ctx.moveTo((path[0][0]+0.5)*S,(path[0][1]+0.5)*S);for(var i=1;i<path.length;i++)ctx.lineTo((path[i][0]+0.5)*S,(path[i][1]+0.5)*S);ctx.stroke();ctx.setLineDash([])}if(path&&!battling){for(var i=1;i<path.length-1;i++){var dx1=path[i][0]-path[i-1][0],dy1=path[i][1]-path[i-1][1],dx2=path[i+1][0]-path[i][0],dy2=path[i+1][1]-path[i][1];if(dx1!==dx2||dy1!==dy2){ctx.beginPath();ctx.arc((path[i][0]+0.5)*S,(path[i][1]+0.5)*S,S*0.28,0,Math.PI*2);ctx.strokeStyle="rgba(255,100,100,0.5)";ctx.lineWidth=2;ctx.stroke()}}}for(var i=0;i<gems.length;i++){var g=gems[i],gx=(g.x+0.5)*S,gy=(g.y+0.5)*S;ctx.beginPath();ctx.arc(gx,gy,S*0.4,0,Math.PI*2);ctx.fillStyle=g.color+"44";ctx.fill();ctx.strokeStyle=g.color;ctx.lineWidth=2;ctx.stroke();ctx.font=(S*0.42)+"px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(g.icon,gx,gy);ctx.fillStyle="#fff";ctx.font="bold 9px sans-serif";ctx.fillText("Lv"+g.lv,gx,gy+S*0.28)}for(var i=0;i<enemies.length;i++){var e=enemies[i],sz=e.size*S*0.4;ctx.beginPath();ctx.arc(e.x,e.y,sz,0,Math.PI*2);ctx.fillStyle=e.freeze>0?"#00BFFF":e.color;ctx.fill();ctx.fillStyle="#333";ctx.fillRect(e.x-sz,e.y-sz-5,sz*2,4);var hr=Math.max(0,e.hp/e.maxHp);ctx.fillStyle=hr>0.5?"#4c4":hr>0.25?"#cc4":"#c44";ctx.fillRect(e.x-sz,e.y-sz-5,sz*2*hr,4)}for(var i=0;i<bullets.length;i++){var b=bullets[i];ctx.beginPath();ctx.arc(b.x,b.y,5,0,Math.PI*2);ctx.fillStyle=b.color;ctx.fill()}for(var i=0;i<particles.length;i++){var p=particles[i];ctx.globalAlpha=p.life/p.maxLife;ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);ctx.fillStyle=p.color;ctx.fill()}ctx.globalAlpha=1}
+function spawnParticle(x,y,c,n){for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*4;particles.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,color:c,life:30,maxLife:30})}}
+function updateUI(){document.getElementById("gold").textContent=gold;document.getElementById("wave").textContent=wave;document.getElementById("hp").textContent=hp}
+function resetMaze(){initGrid();gold=300;enemies=[];bullets=[];battling=false;document.getElementById("mode-text").textContent="建造中";document.getElementById("btn-start").textContent="开战";updateUI()}
+function startGame(){document.getElementById("menu").style.display="none";document.getElementById("game").style.display="flex";document.getElementById("over").style.display="none";init();resize();initGrid();gold=300;hp=20;wave=0;kills=0;enemies=[];bullets=[];battling=false;updateUI()}
+function gameOver(){battling=false;document.getElementById("ow").textContent=wave;document.getElementById("ok").textContent=kills;document.getElementById("over").style.display="flex"}
+init();
+</script>
+</body>
+</html>

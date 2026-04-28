@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,maximum-scale=1">
+<title>迷宫塔防 V5</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;user-select:none}
+body{background:#0a0a1a;font-family:sans-serif;overflow:hidden}
+#game{width:100vw;height:100vh;display:flex;flex-direction:column}
+#top{height:44px;background:#1a1a3a;display:flex;align-items:center;justify-content:space-around;border-bottom:1px solid #3a3a6a}
+.stat{color:#aaa;font-size:14px}
+.stat b{color:#FFD700;font-size:18px}
+#cv-wrap{flex:1;position:relative;overflow:hidden}
+canvas{display:block;width:100%;height:100%}
+#entry-tip{position:absolute;top:5px;left:50%;transform:translateX(-50%);background:#00C853;color:#fff;padding:5px 14px;border-radius:16px;font-size:12px;font-weight:bold;z-index:10}
+#exit-tip{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);background:#FF5252;color:#fff;padding:5px 14px;border-radius:16px;font-size:12px;font-weight:bold;z-index:10}
+#wave-tip{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:32px;font-weight:bold;color:#4CAF50;display:none;z-index:20;text-shadow:0 0 20px #4CAF50}
+#info{position:absolute;top:50px;right:8px;background:rgba(0,0,0,0.8);border:1px solid #4ECDC4;border-radius:10px;padding:10px;font-size:11px;color:#aaa;z-index:10}
+#info b{color:#FFD700}
+#info .ok{color:#4CAF50}
+#info .no{color:#F44336}
+#btm{height:130px;background:#1a1a3a;border-top:1px solid #3a3a6a;padding:8px}
+#tools{display:flex;gap:8px;justify-content:center;margin-bottom:8px}
+.tl{width:52px;height:56px;border-radius:10px;border:2px solid #555;background:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.tl.on{border-color:#FFD700;background:#333}
+.tl .ic{font-size:20px}
+.tl .nm{font-size:10px;color:#aaa;margin-top:2px}
+.tl .cs{font-size:11px;color:#FFD700;font-weight:bold}
+#towers{display:none;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+.tw{width:42px;height:42px;border-radius:8px;border:2px solid #555;background:#222;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer}
+.tw.on{border-color:#FFD700}
+.tw .ic{font-size:16px}
+.tw .cs{font-size:9px;color:#FFD700}
+#acts{display:flex;gap:10px;justify-content:center}
+.btn{padding:10px 24px;border-radius:20px;border:none;font-size:13px;font-weight:bold;cursor:pointer}
+#btn-go{background:#4CAF50;color:#fff}
+#btn-undo{background:#FF9800;color:#fff}
+#btn-clr{background:#607D8B;color:#fff}
+#menu{position:absolute;inset:0;background:linear-gradient(#2a2a5a,#0a0a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100}
+#menu h1{color:#4ECDC4;font-size:26px;margin-bottom:8px}
+#menu h2{color:#888;font-size:14px;margin-bottom:25px;font-weight:normal}
+.menu-btn{width:180px;padding:12px;margin:8px 0;background:#2a2a4a;border:2px solid #6a6aaa;color:#fff;border-radius:12px;font-size:15px;cursor:pointer}
+.hint{margin-top:20px;padding:12px;background:rgba(0,0,0,0.3);border-radius:10px;max-width:260px}
+.hint h3{color:#4ECDC4;font-size:12px;margin-bottom:8px}
+.hint p{color:#999;font-size:11px;margin:4px 0;line-height:1.5}
+</style>
+</head>
+<body>
+<div id="menu">
+<h1>🏰 迷宫塔防</h1>
+<h2>建造迷宫，阻止怪物！</h2>
+<button class="menu-btn" onclick="begin()">▶ 开始游戏</button>
+<div class="hint">
+<h3>🎯 玩法</h3>
+<p>怪物从 🟢入口 走到 🔴出口</p>
+<p>用墙壁设计迷宫路径</p>
+<p>路径越长 = 攻击时间越多！</p>
+</div>
+</div>
+
+<div id="game" style="display:none">
+<div id="top">
+<span class="stat">💰<b id="gold">300</b></span>
+<span class="stat">🌊<b id="wave">0</b></span>
+<span class="stat">❤️<b id="hp">20</b></span>
+</div>
+<div id="cv-wrap">
+<canvas id="cv"></canvas>
+<div id="entry-tip">🟢 入口 - 怪物从这里进入</div>
+<div id="exit-tip">🔴 出口 - 怪物到达这里扣血</div>
+<div id="wave-tip"></div>
+<div id="info">
+<p>路径: <b id="plen">-</b>格</p>
+<p>转弯: <b id="pturn">-</b>处</p>
+<p>效率: <b id="peff">-</b></p>
+</div>
+</div>
+<div id="btm">
+<div id="tools">
+<div class="tl on" id="tl-wall" onclick="setTool('wall')"><span class="ic">🧱</span><span class="nm">墙壁</span><span class="cs">10金</span></div>
+<div class="tl" id="tl-twr" onclick="setTool('twr')"><span class="ic">🗼</span><span class="nm">防御塔</span><span class="cs">选塔</span></div>
+<div class="tl" id="tl-del" onclick="setTool('del')"><span class="ic">🗑️</span><span class="nm">删除</span><span class="cs">退70%</span></div>
+</div>
+<div id="towers">
+<div class="tw" data-t="arc" onclick="selT('arc')"><span class="ic">🏹</span><span class="cs">80</span></div>
+<div class="tw" data-t="can" onclick="selT('can')"><span class="ic">💥</span><span class="cs">120</span></div>
+<div class="tw" data-t="ice" onclick="selT('ice')"><span class="ic">❄️</span><span class="cs">100</span></div>
+<div class="tw" data-t="ele" onclick="selT('ele')"><span class="ic">⚡</span><span class="cs">150</span></div>
+<div class="tw" data-t="poi" onclick="selT('poi')"><span class="ic">☠️</span><span class="cs">90</span></div>
+</div>
+<div id="acts">
+<button class="btn" id="btn-go" onclick="toggleFight()">⚔️ 开战</button>
+<button class="btn" id="btn-undo" onclick="undo()">↩️ 撤销</button>
+<button class="btn" id="btn-clr" onclick="clearAll()">🗑️ 清空</button>
+</div>
+</div>
+</div>
+
+<script>
+var CS=38,COLS=8,ROWS=12;
+var ENTRY={x:1,y:0},EXIT={x:COLS-2,y:ROWS-1};
+var WALL_COST=10,TOWER_COST={arc:80,can:120,ice:100,ele:150,poi:90};
+var TOWER_DATA={
+arc:{ic:'🏹',co:'#4CAF50',dmg:15,rng:3,spd:60},
+can:{ic:'💥',co:'#F44336',dmg:40,rng:2.5,spd:90,aoe:1.2},
+ice:{ic:'❄️',co:'#03A9F4',dmg:10,rng:2.5,spd:50,slow:0.5},
+ele:{ic:'⚡',co:'#FFC107',dmg:20,rng:2.5,spd:40,chain:3},
+poi:{ic:'☠️',co:'#8BC34A',dmg:8,rng:2,spd:30,dot:5}
+};
+var cv,cx,W,H,gx,gy;
+var grid=[],path=[],towers=[],enemies=[],bullets=[],parts=[];
+var gold=300,hp=20,wave=0,kills=0;
+var tool='wall',selT=null,fighting=false,hist=[];
+
+function init(){
+cv=document.getElementById('cv');
+cx=cv.getContext('2d');
+resize();
+cv.onclick=onClick;
+cv.ontouchend=onTouch;
+}
+function resize(){
+var w=document.getElementById('cv-wrap');
+W=w.clientWidth;H=w.clientHeight;
+cv.width=W;cv.height=H;
+gx=Math.floor((W-COLS*CS)/2);
+gy=Math.floor((H-ROWS*CS)/2);
+}
+function initGrid(){
+grid=[];
+for(var y=0;y<ROWS;y++){
+grid[y]=[];
+for(var x=0;x<COLS;x++){
+grid[y][x]=(x===0||x===COLS-1||y===0||y===ROWS-1)?1:0;
+}
+}
+grid[ENTRY.y][ENTRY.x]=0;
+grid[EXIT.y][EXIT.x]=0;
+towers=[];enemies=[];bullets=[];parts=[];hist=[];
+path=findPath();
+updateInfo();
+}
+function findPath(){
+var q=[[ENTRY.x,ENTRY.y,[]]],v={};
+v[ENTRY.x+','+ENTRY.y]=true;
+var d=[[0,1],[1,0],[0,-1],[-1,0]];
+while(q.length){
+var c=q.shift();
+var x=c[0],y=c[1],p=c[2];
+if(x===EXIT.x&&y===EXIT.y)return p.concat([[x,y]]);
+for(var i=0;i<4;i++){
+var nx=x+d[i][0],ny=y+d[i][1],k=nx+','+ny;
+if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS&&grid[ny][nx]===0&&!v[k]){
+v[k]=true;
+q.push([nx,ny,p.concat([[x,y]])]);
+}
+}
+}
+return null;
+}
+function countTurns(p){
+if(!p||p.length<3)return 0;
+var t=0;
+for(var i=1;i<p.length-1;i++){
+if(p[i][0]-p[i-1][0]!==p[i+1][0]-p[i][0]||p[i][1]-p[i-1][1]!==p[i+1][1]-p[i][1])t++;
+}
+return t;
+}
+function updateInfo(){
+document.getElementById('plen').textContent=path?path.length:'断';
+document.getElementById('pturn').textContent=countTurns(path);
+if(!path){
+document.getElementById('peff').textContent='阻断!';
+document.getElementById('peff').className='no';
+}else{
+var minLen=Math.abs(EXIT.x-ENTRY.x)+Math.abs(EXIT.y-ENTRY.y);
+var ratio=path.length/minLen;
+var bonus=1+countTurns(path)*0.15;
+var score=Math.floor(ratio*bonus*100);
+if(score>=150){document.getElementById('peff').textContent='极佳'+score+'%';document.getElementById('peff').className='ok';}
+else if(score>=100){document.getElementById('peff').textContent='良好'+score+'%';document.getElementById('peff').className='ok';}
+else{document.getElementById('peff').textContent='较差'+score+'%';document.getElementById('peff').className='no';}
+}
+}
+function setTool(t){
+tool=t;
+document.querySelectorAll('.tl').forEach(e=>e.classList.remove('on'));
+document.getElementById('tl-'+(t==='twr'?'twr':t)).classList.add('on');
+document.getElementById('towers').style.display=(t==='twr'?'flex':'none');
+if(t!=='twr')selT=null;
+document.querySelectorAll('.tw').forEach(e=>e.classList.remove('on'));
+}
+function selT(t){
+selT=t;
+document.querySelectorAll('.tw').forEach(e=>e.classList.toggle('on',e.dataset.t===t));
+}
+function onClick(e){
+if(fighting)return;
+var r=cv.getBoundingClientRect();
+doAct(e.clientX-r.left,e.clientY-r.top);
+}
+function onTouch(e){
+if(fighting)return;
+e.preventDefault();
+var t=e.changedTouches[0],r=cv.getBoundingClientRect();
+doAct(t.clientX-r.left,t.clientY-r.top);
+}
+function doAct(mx,my){
+var x=Math.floor((mx-gx)/CS),y=Math.floor((my-gy)/CS);
+if(x<=0||x>=COLS-1||y<=0||y>=ROWS-1)return;
+if((x===ENTRY.x&&y===ENTRY.y)||(x===EXIT.x&&y===EXIT.y))return;
+
+if(tool==='wall'&&grid[y][x]===0&&gold>=WALL_COST){
+hist.push({type:'w',x:x,y:y});
+grid[y][x]=1;
+gold-=WALL_COST;
+var np=findPath();
+if(!np){
+grid[y][x]=0;
+gold+=WALL_COST;
+hist.pop();
+alert('不能阻断路径！');
+path=findPath();
+}else{path=np;}
+updateInfo();draw();
+}else if(tool==='twr'&&selT&&grid[y][x]===0&&gold>=TOWER_COST[selT]){
+var td=TOWER_DATA[selT];
+hist.push({type:'t',x:x,y:y,t:selT});
+grid[y][x]=2;
+gold-=TOWER_COST[selT];
+towers.push({x:x,y:y,type:selT,lv:1,ic:td.ic,co:td.co,dmg:td.dmg,rng:td.rng,spd:td.spd,aoe:td.aoe||0,slow:td.slow||0,chain:td.chain||0,dot:td.dot||0,cd:0});
+path=findPath();
+updateInfo();draw();
+}else if(tool==='del'){
+if(grid[y][x]===1){
+grid[y][x]=0;
+gold+=Math.floor(WALL_COST*0.7);
+}else if(grid[y][x]===2){
+for(var i=0;i<towers.length;i++)if(towers[i].x===x&&towers[i].y===y){gold+=Math.floor(TOWER_COST[towers[i].type]*0.6);towers.splice(i,1);break;}
+grid[y][x]=0;
+}
+path=findPath();
+updateInfo();draw();
+}
+}
+function undo(){
+if(!hist.length)return;
+var h=hist.pop();
+if(h.type==='w'){grid[h.y][h.x]=0;gold+=WALL_COST;}
+else{for(var i=0;i<towers.length;i++)if(towers[i].x===h.x&&towers[i].y===h.y){gold+=TOWER_COST[towers[i].type];towers.splice(i,1);break;}grid[h.y][h.x]=0;}
+path=findPath();
+updateInfo();draw();
+}
+function clearAll(){initGrid();gold=300;draw();}
+function toggleFight(){
+if(!fighting){
+if(!path){alert('请先建造有效迷宫！');return;}
+fighting=true;
+document.getElementById('btn-go').textContent='⏸ 暂停';
+document.getElementById('entry-tip').style.display='none';
+document.getElementById('exit-tip').style.display='none';
+if(!enemies.length)spawnWave();
+loop();
+}else{fighting=false;document.getElementById('btn-go').textContent='⚔️ 开战';}
+}
+function spawnWave(){
+wave++;
+showTip(wave%10===0?'👹 BOSS':'🌊 '+wave+'波');
+if(wave%10===0){enemies.push(makeEne(2000+wave*200,'#AB47BC',1.0,500,true));}
+else{
+var cnt=Math.min(5+wave*2,25);
+for(var i=0;i<cnt;i++){
+var hp=50+wave*5,c='#8BC34A',sz=0.4,g=8;
+if(Math.random()<0.2&&wave>=3){hp=100;c='#42A5F5';sz=0.35;g=10;}
+setTimeout(function(h,cc,ss,gg){return function(){if(fighting&&path)enemies.push(makeEne(h,cc,ss,gg,false));};}(hp,c,sz,g),i*300);
+}
+}
+upd();
+}
+function makeEne(hp,col,sz,gold,boss){return{x:gx+(path[0][0]+0.5)*CS,y:gy+(path[0][1]+0.5)*CS,hp:hp,maxHp:hp,spd:boss?0.3:1.0,col:col,sz:sz,gold:gold,slow:0,dot:0,dotv:0,pi:0};}
+function showTip(t){var e=document.getElementById('wave-tip');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',1000);}
+function loop(){
+if(!fighting)return;
+for(var i=enemies.length-1;i>=0;i--){
+var e=enemies[i];
+var spd=e.spd;if(e.slow>0){spd*=0.5;e.slow--;}if(e.dot>0){e.hp-=e.dotv;e.dot--;}
+e.pi+=spd/60;var idx=Math.min(Math.floor(e.pi),path.length-1);
+e.x=gx+(path[idx][0]+0.5)*CS;e.y=gy+(path[idx][1]+0.5)*CS;
+if(e.pi>=path.length-1){hp--;enemies.splice(i,1);upd();if(hp<=0){gameOver();return;}continue;}
+if(e.hp<=0){gold+=e.gold;kills++;spawnP(e.x,e.y,e.col,15);enemies.splice(i,1);upd();}
+}
+if(!enemies.length)setTimeout(()=>{if(fighting)spawnWave();},800);
+for(var i=0;i<towers.length;i++){
+var t=towers[i];if(t.cd>0){t.cd--;continue;}
+var tx=gx+(t.x+0.5)*CS,ty=gy+(t.y+0.5)*CS,rng=t.rng*CS,tgt=null,md=99999;
+for(var j=0;j<enemies.length;j++){var d=Math.sqrt((enemies[j].x-tx)**2+(enemies[j].y-ty)**2);if(d<rng&&d<md){md=d;tgt=enemies[j];}}
+if(tgt){t.cd=t.spd/60;var a=Math.atan2(tgt.y-ty,tgt.x-tx);bullets.push({x:tx,y:ty,vx:Math.cos(a)*12,vy:Math.sin(a)*12,dmg:t.dmg,col:t.co,t:t});}
+}
+for(var i=bullets.length-1;i>=0;i--){
+var b=bullets[i];b.x+=b.vx;b.y+=b.vy;
+if(b.x<gx||b.x>gx+COLS*CS||b.y<gy||b.y>gy+ROWS*CS){bullets.splice(i,1);continue;}
+for(var j=enemies.length-1;j>=0;j--){
+var e=enemies[j];if(Math.sqrt((e.x-b.x)**2+(e.y-b.y)**2)<e.sz*CS*0.5+5){
+e.hp-=b.dmg;if(b.t.slow)e.slow=90;if(b.t.dot){e.dot=150;e.dotv=b.t.dot;}
+if(b.t.aoe)for(var k=0;k<enemies.length;k++)if(enemies[k]!==e&&Math.sqrt((enemies[k].x-b.x)**2+(enemies[k].y-b.y)**2)<b.t.aoe*CS)enemies[k].hp-=b.dmg*0.35;
+if(b.t.chain){var cc=b.t.chain;for(var k=0;k<enemies.length&&cc>0;k++)if(enemies[k]!==e&&Math.sqrt((enemies[k].x-e.x)**2+(enemies[k].y-e.y)**2)<CS*2.5){enemies[k].hp-=b.dmg*0.5;cc--;}}
+spawnP(b.x,b.y,b.col,6);bullets.splice(i,1);break;
+}
+}
+}
+for(var i=parts.length-1;i>=0;i--){parts[i].x+=parts[i].vx;parts[i].y+=parts[i].vy;parts[i].vy+=0.15;parts[i].l--;if(parts[i].l<=0)parts.splice(i,1);}
+draw();requestAnimationFrame(loop);
+}
+function draw(){
+cx.fillStyle='#0a0a1a';cx.fillRect(0,0,W,H);
+for(var y=0;y<ROWS;y++)for(var x=0;x<COLS;x++){
+var px=gx+x*CS,py=gy+y*CS,v=grid[y][x];
+if(v===1){cx.fillStyle='#2a2a5a';cx.fillRect(px+2,py+2,CS-4,CS-4);}
+else{cx.fillStyle='#0f0f2f';cx.fillRect(px,py,CS,CS);}
+}
+// 入口
+var epx=gx+ENTRY.x*CS,epy=gy+ENTRY.y*CS;
+cx.fillStyle='rgba(0,200,83,0.4)';cx.fillRect(epx,epy,CS,CS);
+cx.strokeStyle='#00C853';cx.lineWidth=3;cx.strokeRect(epx+2,epy+2,CS-4,CS-4);
+cx.font=(CS*0.5)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+cx.fillText('⬇️',epx+CS/2,epy+CS/2);
+// 出口
+var xpx=gx+EXIT.x*CS,xpy=gy+EXIT.y*CS;
+cx.fillStyle='rgba(255,82,82,0.4)';cx.fillRect(xpx,xpy,CS,CS);
+cx.strokeStyle='#FF5252';cx.lineWidth=3;cx.strokeRect(xpx+2,xpy+2,CS-4,CS-4);
+cx.fillText('⬆️',xpx+CS/2,xpy+CS/2);
+// 路径
+if(path&&!fighting){
+cx.strokeStyle='rgba(255,215,0,0.3)';cx.lineWidth=4;cx.setLineDash([8,4]);
+cx.beginPath();cx.moveTo(gx+(path[0][0]+0.5)*CS,gy+(path[0][1]+0.5)*CS);
+for(var i=1;i<path.length;i++)cx.lineTo(gx+(path[i][0]+0.5)*CS,gy+(path[i][1]+0.5)*CS);
+cx.stroke();cx.setLineDash([]);
+}
+// 塔
+for(var i=0;i<towers.length;i++){
+var t=towers[i],tx=gx+(t.x+0.5)*CS,ty=gy+(t.y+0.5)*CS;
+cx.beginPath();cx.arc(tx,ty,CS*0.32,0,Math.PI*2);
+cx.fillStyle=t.co+'66';cx.fill();cx.strokeStyle=t.co;cx.lineWidth=2;cx.stroke();
+cx.font=(CS*0.35)+'px sans-serif';cx.textAlign='center';cx.textBaseline='middle';
+cx.fillText(t.ic,tx,ty);cx.fillStyle='#fff';cx.font='8px sans-serif';cx.fillText('Lv'+t.lv,tx,ty+CS*0.22);
+}
+// 敌人
+for(var i=0;i<enemies.length;i++){
+var e=enemies[i],sz=e.sz*CS*0.4;
+cx.beginPath();cx.arc(e.x,e.y,sz,0,Math.PI*2);
+cx.fillStyle=e.slow>0?'#00BFFF':e.col;cx.fill();
+cx.fillStyle='#333';cx.fillRect(e.x-sz,e.y-sz-5,sz*2,4);
+var hr=Math.max(0,e.hp/e.maxHp);
+cx.fillStyle=hr>0.5?'#4CAF50':hr>0.25?'#FFC107':'#F44336';
+cx.fillRect(e.x-sz,e.y-sz-5,sz*2*hr,4);
+}
+// 子弹
+for(var i=0;i<bullets.length;i++){cx.beginPath();cx.arc(bullets[i].x,bullets[i].y,5,0,Math.PI*2);cx.fillStyle=bullets[i].col;cx.fill();}
+// 粒子
+for(var i=0;i<parts.length;i++){cx.globalAlpha=parts[i].l/parts[i].ml;cx.beginPath();cx.arc(parts[i].x,parts[i].y,3,0,Math.PI*2);cx.fillStyle=parts[i].co;cx.fill();}
+cx.globalAlpha=1;
+}
+function spawnP(x,y,c,n){for(var i=0;i<n;i++){var a=Math.random()*Math.PI*2,s=2+Math.random()*4;parts.push({x:x,y:y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,co:c,l:30,ml:30});}}
+function upd(){document.getElementById('gold').textContent=gold;document.getElementById('wave').textContent=wave;document.getElementById('hp').textContent=hp;}
+function begin(){document.getElementById('menu').style.display='none';document.getElementById('game').style.display='flex';init();initGrid();gold=300;hp=20;wave=0;kills=0;fighting=false;upd();draw();}
+function gameOver(){fighting=false;alert('游戏结束！波次:'+wave+' 击杀:'+kills);begin();}
+init();
+</script>
+</body>
+</html>
